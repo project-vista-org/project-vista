@@ -1,0 +1,23 @@
+---
+name: prompt-request
+description: Generates detailed and context-aware prompts for other AI systems when user messages begin with "prompt:" or "prp:" prefixes
+globs:
+alwaysApply: true
+---
+
+# Prompt Request Handler
+
+When a user message begins with `prompt:` or `prp:` (case-insensitive):
+
+1. DO NOT solve or implement the requested task directly
+2. INSTEAD generate a comprehensive, ready-to-use prompt inside a Markdown code block (```prompt content```)
+3. The generated prompt MUST:
+   - Be specific and detailed enough for another AI system to perform the requested action
+   - Include all relevant context from the user's request
+   - Incorporate contextual information from relevant files and examples
+   - Guide the receiving agent with detailed specifications and requirements
+   - Be as informative and comprehensive as possible
+
+4. ALWAYS prioritize preserving context from the user's original request
+5. ANALYZE code files and examples to enrich the resulting prompt with specific details
+6. FORMAT the entire prompt inside a Markdown code block for easy copying and pasting by the user

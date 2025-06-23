@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Code Style Guidelines
+
+## Function Calls
+
+- **Use named arguments** – Prefer `foo(user_id=user.id)` over `foo(user.id)` for clarity and maintainability.

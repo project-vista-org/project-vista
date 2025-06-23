@@ -1,0 +1,106 @@
+---
+description: Guidelines for conducting pre-PR code reviews
+globs:
+alwaysApply: true
+---
+# Code Review Guidelines
+
+This document outlines the standardized approach for conducting code reviews and pull request assessments in our codebase.
+
+---
+
+## 🔍 Review Process
+
+When a user requests a code review or PR assessment (with "code review:", "review my PR", etc.), follow these structured steps:
+
+### 1. **Identify Changed Files**
+
+First, determine which files have been modified:
+
+```bash
+git diff --name-status master -- ':!*.json'
+```
+
+Categorize results as:
+- ⬆️ **Added** - New files
+- ✏️ **Modified** - Changed existing files
+- ➖ **Deleted** - Removed files
+
+### 2. **Check for Unstaged Files**
+
+Always check for unstaged or untracked files that may be relevant:
+
+```bash
+git status
+```
+
+If unstaged/untracked files exist:
+- Inform the user about these additional files
+- Ask if they want to include these files in the review
+- For unstaged modified files: `git diff -- <file>`
+- For untracked files: `cat <file>` to view content
+
+This ensures the review covers all relevant changes, even those not yet committed.
+
+### 3. **Load and Analyze Diffs**
+
+For each file, examine the actual changes:
+
+```bash
+git diff master --ignore-all-space -- <file>
+```
+
+Skip whitespace-only changes to focus on meaningful differences.
+
+### 4. **Architectural Assessment**
+
+For each changed file and the overall changes, evaluate:
+
+- **Correct Location**: Is the file in the appropriate layer/component?
+- **Architecture Principles**:
+  - SOLID principles adherence
+  - Separation of concerns
+  - Single responsibility
+  - Proper boundaries between domain/infrastructure/UI layers
+- **Project Structure**: Consistency with our established folder structure
+
+### 5. **Code Quality Review**
+
+Examine the code itself for:
+
+- **Naming**: Clear, consistent class/function/variable names
+- **Readability**: Simple code with minimal nesting and reasonable method lengths
+- **Idioms**: Proper use of language features and framework patterns
+- **DRY Principle**: Opportunities for extraction or reuse
+- **Resilience**: Error handling, logging, and edge-case coverage
+- **Dependencies**: Appropriate management of new packages or version changes
+
+### 6. **Testing & Verification**
+
+Assess the test coverage:
+
+- Identify untested logic (unit/integration/e2e)
+- Suggest specific test cases:
+  - Happy path scenarios
+  - Edge cases
+  - Error/exception handling
+- Flag potential issues:
+  - Flaky tests
+  - Slow test execution
+  - Brittle test patterns
+
+---
+
+## 📋 Review Output Format
+
+Provide a structured summary of findings:
+
+1. **Overview**: Brief summary of changes and their purpose
+2. **Key Strengths**: Positive aspects of the implementation
+3. **Improvement Areas**: Organized by priority (critical, moderate, minor)
+4. **Testing Gaps**: Specific recommendations for additional tests
+5. **Next Steps**: Clear actionable items before merging
+
+When unstaged files were included, clearly separate your assessment of staged vs. unstaged changes, with recommendations for each category.
+
+Focus on constructive feedback that helps improve code quality while respecting the developer's approach.

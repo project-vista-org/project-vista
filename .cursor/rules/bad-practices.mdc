@@ -1,0 +1,144 @@
+---
+description: Things to avoid when writing code
+globs:
+alwaysApply: true
+---
+# Bad Practices to Avoid
+
+This document outlines common anti-patterns to avoid when modifying code in this repository.
+
+## Excessive Testing for Simple Changes
+
+- **Don't** create elaborate test files for simple refactoring or straightforward code improvements
+- **Don't** run multiple syntax checks, create temporary test scripts, or perform extensive validation for minimal changes
+- **Don't** over-engineer verification for changes that are clearly safe (like replacing `endswith()` with glob patterns)
+- **Do** use basic syntax validation (`python -m py_compile`) only when there's genuine uncertainty about the change
+- **Do** match the testing effort to the complexity and risk of the change
+- **Do** trust simple, well-understood improvements without extensive verification
+
+**Note:** This applies to AI behavior during code editing/suggestions. Proper tests should still be written when they're actually needed for the codebase.
+
+### Example of what to avoid:
+
+```python
+# Don't create temporary test files for simple refactoring
+# test_my_simple_change.py - AVOID THIS for basic improvements
+
+# Don't run multiple verification steps for straightforward changes:
+# 1. Create test file
+# 2. Run syntax check
+# 3. Create mock environment
+# 4. Test edge cases
+# 5. Multiple validation rounds
+
+# This is overkill for replacing:
+# if filename.endswith(('.jpg', '.png'))
+# with:
+# glob.glob('*.jpg') + glob.glob('*.png')
+```
+
+## Unnecessary Import Fallbacks
+
+- **Don't** add try/except blocks around imports unless you've confirmed the imported module may be legitimately missing in some environments
+- **Don't** create elaborate fallback implementations for imports without verifying they're needed
+- **Do** understand the actual dependencies of the codebase before adding defensive import logic
+
+### Example of what to avoid:
+
+```python
+# Don't do this unless you know the import might fail in certain environments
+try:
+    from some_module import SomeClass
+except ImportError:
+    # Unnecessary fallback implementation
+    class SomeClass:
+        def __init__(self):
+            print("Fallback implementation")
+```
+
+## Avoid TypeVar for Simple Decorators
+
+- **Don't** use TypeVar for simple function decorators where it adds unnecessary complexity
+- **Don't** create elaborate type hints with generics when simpler typing would suffice
+- **Do** use simpler typing approaches when possible
+
+### Example of what to avoid:
+
+```python
+# Don't use this complex TypeVar pattern for simple decorators
+from typing import Callable, Any, TypeVar, cast
+
+T = TypeVar('T', bound=Callable[..., Any])
+
+def my_decorator(func: T) -> T:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Decorator logic
+        return func(*args, **kwargs)
+    return cast(T, wrapper)
+```
+
+## No Example Files in Production Code
+
+- **Don't** create example files or demo code in production repositories
+- **Don't** add "for demonstration purposes" code that won't be used in actual production
+- **Do** implement your solutions directly in the appropriate existing production files
+- **Do** make changes that can be immediately pushed to production without cleanup
+
+### Example of what to avoid:
+
+```python
+# Don't create files like this:
+# examples/my_feature_example.py
+
+"""
+Example showing how to use MyFeature properly.
+This is just for demonstration and not used in production.
+"""
+
+def example_function():
+    # Example implementation
+    pass
+
+if __name__ == "__main__":
+    # Example usage
+    example_function()
+```
+
+## Documentation Consistency
+
+- **Don't** add extensive docstrings to new functions if surrounding code doesn't follow the same documentation pattern
+- **Don't** introduce a different documentation style than what's used in the rest of the file or module
+- **Do** match the level of documentation detail to what's already present in the file
+- **Do** follow the established documentation patterns in the codebase
+
+### Example of what to avoid:
+
+```python
+# In a file where functions have minimal or no docstrings:
+
+def existing_function(param):
+    # Simple implementation with minimal comments
+    return param + 1
+
+# Don't add overly detailed docstrings that don't match the file's style
+def new_function(param):
+    """
+    Performs an operation on the input parameter.
+
+    This function takes a parameter and adds 1 to it, returning the result.
+    The operation is a simple arithmetic addition.
+
+    Args:
+        param: The input value to be processed
+
+    Returns:
+        The result of adding 1 to the input parameter
+
+    Raises:
+        TypeError: If param is not a number
+    """
+    return param + 1
+```
+
+Remember to maintain consistency with the existing codebase. When in doubt, mimic the style of the surrounding code.
