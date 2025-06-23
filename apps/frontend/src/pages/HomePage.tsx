@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, BookOpen, Search } from 'lucide-react';
 import { Track } from '@/types';
 import TrackCard from '@/components/TrackCard';
@@ -11,6 +11,7 @@ const HomePage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Load tracks from localStorage (will be replaced with Supabase)
@@ -45,11 +46,7 @@ const HomePage = () => {
   };
 
   const handleTrackClick = (track: Track) => {
-    // Navigate to track view - for now, we'll just show a toast
-    toast({
-      title: "Track View",
-      description: `Opening "${track.title}" - Track view page coming soon!`,
-    });
+    navigate(`/track/${track.id}`);
   };
 
   const filteredTracks = tracks.filter(track =>
