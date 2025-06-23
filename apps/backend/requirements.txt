@@ -1,2 +1,6 @@
 fastapi
-mangum 
+mangum
+supabase
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart 

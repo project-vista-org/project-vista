@@ -1,19 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, BookOpen, Search } from 'lucide-react';
+import { User } from '@supabase/supabase-js';
 import { Track } from '@/types';
 import TrackCard from '@/components/TrackCard';
 import CreateTrackModal from '@/components/CreateTrackModal';
 import { useToast } from '@/hooks/use-toast';
+import { supabase, signOut } from '@/lib/supabase';
 
 const HomePage = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Get current user
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getCurrentUser();
+
     // Load tracks from localStorage (will be replaced with Supabase)
     const savedTracks = localStorage.getItem('projectvista_tracks');
     if (savedTracks) {
@@ -29,7 +39,7 @@ const HomePage = () => {
   const handleCreateTrack = (title: string, articles: any[]) => {
     const newTrack: Track = {
       id: `track_${Date.now()}`,
-      userId: 'demo_user',
+      userId: user?.id || 'unknown',
       title,
       articles,
       createdAt: new Date().toISOString(),
@@ -49,11 +59,28 @@ const HomePage = () => {
     navigate(`/track/${track.id}`);
   };
 
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      console.error('Sign out error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    } else {
+      // Clear local storage
+      localStorage.removeItem('projectvista_tracks');
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+    }
+  };
+
   const filteredTracks = tracks.filter(track =>
     track.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const currentUser = JSON.parse(localStorage.getItem('projectvista_user') || '{}');
 
   return (
     <div className="min-h-screen bg-white">
@@ -67,15 +94,10 @@ const HomePage = () => {
             
             <div className="flex items-center gap-4">
               <span className="text-sm text-text-secondary hidden sm:block">
-                Welcome, {currentUser.name || currentUser.email}
+                Welcome, {user?.user_metadata?.full_name || user?.email}
               </span>
               <button
-                onClick={() => {
-                  localStorage.removeItem('projectvista_auth');
-                  localStorage.removeItem('projectvista_user');
-                  localStorage.removeItem('projectvista_tracks');
-                  window.location.reload();
-                }}
+                onClick={handleSignOut}
                 className="text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
                 Sign Out
