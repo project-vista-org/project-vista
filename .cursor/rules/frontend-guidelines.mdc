@@ -1,0 +1,90 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# 📜 AI Frontend Development Guide for Project Vista
+
+## 1. 🎯 High-Level Objective
+
+Your primary goal is to build and modify **frontend features** for Project Vista in a way that is **100% consistent** with the established design system and application architecture. Every component, page, and UI element you create must feel like a natural extension of the existing app.
+
+**Consistency and adherence to the rules in this document are more important than creative deviation.**
+
+Before writing any frontend code, you **MUST** refer to the project's design system:
+- **`@docs/design-system`**
+
+This document is your single source of truth for all visual and interactive patterns. Do not guess or invent styles.
+
+## 2. 🏛️ Core Principle: Adherence to the Design System
+
+Your work must strictly follow the specifications laid out in `@docs/design-system`. This is not a suggestion; it is a requirement.
+
+### Key Areas to Enforce:
+
+-   **Color Palette:** Use **only** the Tailwind classes defined in the design system's color table (e.g., `bg-blue-500`, `text-gray-800`, `border-gray-200`). **Do not use arbitrary hex codes or other Tailwind colors.**
+-   **Typography:** All text must use the defined typographic scale (e.g., `text-4xl`, `text-lg`, `font-bold`). Apply the `Inter` font for UI and `Lora` for article content as specified.
+-   **Spacing & Layout:** All margins, padding, and gaps **MUST** be multiples of the `8px` base unit, as defined in the spacing system. Use the `max-w-7xl mx-auto` container for main page content.
+-   **Borders & Shadows:** Use the predefined `rounded-lg` default border-radius and `shadow` for cards. Do not create custom shadow or border styles.
+-   **Iconography:** **Only use icons from the `lucide-react` library.** Ensure icons are consistent in size (`h-4 w-4` or `h-5 w-5`) and stroke width.
+
+## 3. 🏗️ Frontend Architectural & Component Workflow
+
+Follow this process when asked to create a new feature or UI element:
+
+### Step 1: Consult the Design System First
+Before writing a single line of code, review `@docs/design-system` to understand the established patterns for the requested element (e.g., modals, cards, buttons).
+
+### Step 2: Reuse Existing Components
+Your first instinct should always be to reuse. Look for existing components before creating new ones:
+1.  **UI Primitives:** Check `apps/frontend/src/components/ui/` for base components from `shadcn/ui` (e.g., `Button`, `Card`, `Dialog`, `Input`).
+2.  **App-Specific Components:** Check `apps/frontend/src/components/` for composed components (e.g., `TrackCard`).
+
+Build new components only when no existing component can fulfill the required function. New components must be composed from the UI primitives.
+
+### Step 3: Implement with Approved Styles
+-   Write all styles using Tailwind CSS utility classes.
+-   **Do not write custom CSS or use inline `style` attributes.** If a style cannot be achieved with the existing system, it's a signal that the pattern might be incorrect.
+
+## 4. ✅ Verification Checklist (Self-Correction)
+
+Before presenting your solution, you must verify your work against this checklist. If any point fails, you must correct your code before finishing.
+
+1.  **Design System Compliance:**
+    -   [ ] Have I used **only** the colors specified in `@docs/design-system`?
+    -   [ ] Does all text conform to the typography scale?
+    -   [ ] Is all spacing (padding, margin, gap) a multiple of `8px`?
+    -   [ ] Have I used the correct border-radius and shadow styles?
+2.  **Component & Icon Usage:**
+    -   [ ] Could this feature have been built using an existing component from `apps/frontend/src/components/`?
+    -   [ ] Are all icons from `lucide-react`?
+3.  **Code Style:**
+    -   [ ] Have I avoided custom CSS and inline styles?
+    -   [ ] Is the code responsive and tested on both mobile and desktop views?
+
+---
+## 5. 💡 Example: What to do vs. What to avoid
+
+### ❌ **INCORRECT (Violates Rules)**
+```tsx
+// This is wrong. It uses a custom color (#555), a non-system font size (15px),
+// a magic number for padding (15px), and an inline style.
+const IncorrectButton = () => (
+  <button style={{ backgroundColor: '#333' }}>
+    <p style={{ fontSize: '15px', color: '#555' }}>Do Not Do This</p>
+  </button>
+);
+```
+
+### ✅ **CORRECT (Follows Rules)**
+```tsx
+import { Button } from "@/components/ui/button"; // Reuse primitive
+
+// This is correct. It uses pre-defined components and Tailwind classes
+// from the design system.
+const CorrectButton = () => (
+  <Button variant="secondary">
+    <span className="text-base text-gray-800">Do This Instead</span>
+  </Button>
+);
+```
