@@ -11,7 +11,11 @@
     "dev:fe": "npm run dev --workspace=frontend",
     "dev:be": "echo 'Running backend separately'",
     "build": "npm run build --workspace=frontend",
-    "lint": "npm run lint --workspace=frontend"
+    "lint": "npm run lint --workspace=frontend",
+    "format": "prettier --write \"apps/frontend/src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"apps/frontend/src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "pre-commit:install": "pre-commit install",
+    "pre-commit:run": "pre-commit run --all-files"
   },
   "devDependencies": {}
-} 
+}
