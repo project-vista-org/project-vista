@@ -24,41 +24,12 @@ on:
         value: ${{ jobs.terraform.outputs.instance_ip }}
 
 jobs:
-  test:
-    # Run tests first
-    uses: ./.github/workflows/backend-test.yml
-    with:
-      environment: ${{ github.event.inputs.environment || 'dev' }}
-      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-    secrets: inherit
-
   terraform:
     # Run terraform after tests pass
-    needs: test
     uses: ./.github/workflows/backend-terraform.yml
     with:
       environment: ${{ github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
       instance_type: ${{ github.event.inputs.instance_type || 't2.micro' }}
       use_access_keys: ${{ github.event.inputs.use_access_keys || 'false' }}
-    secrets: inherit
-
-  build:
-    # Build after infrastructure is ready
-    needs: terraform
-    uses: ./.github/workflows/backend-build.yml
-    with:
-      environment: ${{ github.event.inputs.environment || 'dev' }}
-      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-    secrets: inherit
-
-  deploy:
-    # Deploy after build is complete
-    needs: [build, terraform]
-    uses: ./.github/workflows/backend-deploy.yml
-    with:
-      environment: ${{ github.event.inputs.environment || 'dev' }}
-      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-      image_tag: ${{ needs.build.outputs.image_tag }}
-      instance_ip: ${{ needs.terraform.outputs.instance_ip }}
     secrets: inherit
