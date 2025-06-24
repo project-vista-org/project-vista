@@ -39,12 +39,12 @@ on:
         description: 'ID of an existing VPC to use (leave empty to use default VPC)'
         required: false
         type: string
-        default: ""
+        default: "vpc-0dafdafe8c44a431c"
       existing_subnet_id:
         description: 'ID of an existing subnet to use (leave empty to auto-select a public subnet)'
         required: false
         type: string
-        default: ""
+        default: "subnet-05917f37a18a5a172"
 
 # These permissions are needed to interact with GitHub's OIDC Token endpoint for AWS authentication
 permissions:
