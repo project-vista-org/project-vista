@@ -113,6 +113,25 @@ resource "aws_iam_policy" "secrets_policy" {
   })
 }
 
+# Policy for Budget access
+resource "aws_iam_policy" "budget_policy" {
+  name        = "${var.project_name}-budget-policy"
+  description = "Policy for GitHub Actions to manage budgets"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "budgets:*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # Attach policies to role
 resource "aws_iam_role_policy_attachment" "ecr_attachment" {
   role       = aws_iam_role.github_actions.name
@@ -127,6 +146,11 @@ resource "aws_iam_role_policy_attachment" "ec2_attachment" {
 resource "aws_iam_role_policy_attachment" "secrets_attachment" {
   role       = aws_iam_role.github_actions.name
   policy_arn = aws_iam_policy.secrets_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "budget_attachment" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.budget_policy.arn
 }
 
 # Output the role ARN to use in GitHub Actions

@@ -123,6 +123,24 @@ resource "aws_instance" "web" {
               EOF
 }
 
+# Budget alarm for $0 threshold
+resource "aws_budgets_budget" "zero_cost_budget" {
+  name              = "${var.project_name}-zero-cost-budget"
+  budget_type       = "COST"
+  limit_amount      = "0"
+  limit_unit        = "USD"
+  time_unit         = "MONTHLY"
+  time_period_start = formatdate("YYYY-MM-DD_hh:mm", timestamp())
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 0
+    threshold_type             = "ABSOLUTE_VALUE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.notification_email]
+  }
+}
+
 # Output the public IP
 output "instance_public_ip" {
   value = aws_instance.web.public_ip

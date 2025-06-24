@@ -27,3 +27,9 @@ variable "github_repo" {
   type        = string
   default     = "project-vista" # Replace with your repository name
 }
+
+variable "notification_email" {
+  description = "Email address to receive budget notifications"
+  type        = string
+  default     = "your-email@example.com"  # Replace with your actual email
+}
