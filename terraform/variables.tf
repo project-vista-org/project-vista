@@ -31,7 +31,7 @@ variable "environment" {
 variable "github_owner" {
   description = "GitHub owner/organization name"
   type        = string
-  default     = "alonemanuel" # Replace with your GitHub username or organization
+  default     = "project-vista-org" # Replace with your GitHub username or organization
 }
 
 variable "github_repo" {
