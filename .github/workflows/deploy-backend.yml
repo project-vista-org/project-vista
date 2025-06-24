@@ -46,23 +46,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # test:
-  #   uses: ./.github/workflows/backend-test.yml
-  #   with:
-  #     environment: ${{ github.event.inputs.environment || 'dev' }}
-  #     aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-  #   secrets: inherit
-
-  # build:
-  #   needs: test
-  #   uses: ./.github/workflows/backend-build.yml
-  #   with:
-  #     environment: ${{ github.event.inputs.environment || 'dev' }}
-  #     aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-  #   secrets: inherit
+  test:
+    uses: ./.github/workflows/backend-test.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+    secrets: inherit
 
   terraform:
-    # needs: build
+    needs: test
     uses: ./.github/workflows/backend-terraform.yml
     with:
       environment: ${{ github.event.inputs.environment || 'dev' }}
@@ -70,12 +62,19 @@ jobs:
       instance_type: ${{ github.event.inputs.instance_type || 't2.micro' }}
     secrets: inherit
 
+  build:
+    needs: terraform
+    uses: ./.github/workflows/backend-build.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+    secrets: inherit
+
   deploy:
-    # needs: [build, terraform]
+    needs: [build, terraform]
     uses: ./.github/workflows/backend-deploy.yml
     with:
       environment: ${{ github.event.inputs.environment || 'dev' }}
-      role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
       image_tag: ${{ needs.build.outputs.image_tag }}
       instance_ip: ${{ needs.terraform.outputs.instance_ip }}
