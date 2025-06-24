@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, Book, CheckCircle, Clock } from 'lucide-react';
-import { Track, Article } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { ChevronLeft, Book, CheckCircle, Clock } from "lucide-react";
+import { Track } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const TrackPage = () => {
   const { trackId } = useParams<{ trackId: string }>();
@@ -14,10 +15,10 @@ const TrackPage = () => {
 
   useEffect(() => {
     // This is a mock. Replace with actual data fetching.
-    const savedTracks = localStorage.getItem('projectvista_tracks');
+    const savedTracks = localStorage.getItem("projectvista_tracks");
     if (savedTracks) {
       const tracks: Track[] = JSON.parse(savedTracks);
-      const currentTrack = tracks.find(t => t.id === trackId);
+      const currentTrack = tracks.find((t) => t.id === trackId);
       setTrack(currentTrack || null);
     }
     setLoading(false);
@@ -30,49 +31,62 @@ const TrackPage = () => {
   if (!track) {
     return (
       <div className="text-center py-10">
-        <h2 className="text-2xl font-bold">Track not found</h2>
-        <Link to="/" className="text-accent-blue hover:underline">
+        <h2 className="text-2xl font-bold text-foreground">Track not found</h2>
+        <Link
+          to="/"
+          className="text-accent-blue dark:text-accent-blue-dark hover:underline"
+        >
           Go back to your tracks
         </Link>
       </div>
     );
   }
 
-  const completedArticles = track.articles.filter(a => a.completed).length;
+  const completedArticles = track.articles.filter((a) => a.completed).length;
   const progress = (completedArticles / track.articles.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <header className="bg-background dark:bg-gray-900 border-b border-border dark:border-gray-700 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <Link to="/" className="text-2xl font-bold text-text-primary">ProjectVista</Link>
+              <Link to="/" className="text-2xl font-bold text-foreground">
+                ProjectVista
+              </Link>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
-      
+
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
-        <Link to="/" className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary mb-6">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-gray-50 mb-6"
+        >
           <ChevronLeft className="h-4 w-4" />
           Back to all tracks
         </Link>
-        
+
         {/* Track Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-text-primary mb-3">{track.title}</h1>
-          <div className="flex items-center gap-4 text-sm text-text-secondary">
+          <h1 className="text-4xl font-bold text-foreground mb-3">
+            {track.title}
+          </h1>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground dark:text-gray-400">
             <div className="flex items-center gap-2">
               <Book className="h-4 w-4" />
               <span>{track.articles.length} articles</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              <span>Created on {new Date(track.createdAt).toLocaleDateString()}</span>
+              <span>
+                Created on {new Date(track.createdAt).toLocaleDateString()}
+              </span>
             </div>
           </div>
         </div>
@@ -84,40 +98,64 @@ const TrackPage = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div className="bg-accent-blue h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                <div
+                  className="bg-accent-blue dark:bg-accent-blue-dark h-2.5 rounded-full"
+                  style={{ width: `${progress}%` }}
+                ></div>
               </div>
-              <span className="font-medium text-text-secondary">{Math.round(progress)}%</span>
+              <span className="font-medium text-muted-foreground dark:text-gray-300">
+                {Math.round(progress)}%
+              </span>
             </div>
-            <p className="text-sm text-text-secondary mt-2">{completedArticles} of {track.articles.length} articles completed.</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400 mt-2">
+              {completedArticles} of {track.articles.length} articles completed.
+            </p>
           </CardContent>
         </Card>
 
         {/* Articles List */}
         <div>
-          <h2 className="text-2xl font-bold text-text-primary mb-4">Track Articles</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-4">
+            Track Articles
+          </h2>
           <div className="space-y-4">
             {track.articles.map((article, index) => (
-              <a 
-                key={index} 
+              <a
+                key={index}
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block p-5 rounded-lg border bg-white hover:bg-gray-50 transition-all duration-200"
+                className="block p-5 rounded-lg border border-border dark:border-gray-700 bg-card dark:bg-gray-800 hover:bg-muted dark:hover:bg-gray-700 transition-all duration-200"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-lg font-semibold text-text-primary">{article.title}</p>
-                    <p className="text-sm text-text-secondary mt-1">Order: {index + 1}</p>
+                    <p className="text-lg font-semibold text-foreground">
+                      {article.title}
+                    </p>
+                    <p className="text-sm text-muted-foreground dark:text-gray-400 mt-1">
+                      Order: {index + 1}
+                    </p>
                   </div>
                   {article.completed ? (
-                     <Badge variant="default" className="bg-green-100 text-green-800">Completed</Badge>
+                    <Badge
+                      variant="default"
+                      className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300"
+                    >
+                      Completed
+                    </Badge>
                   ) : (
-                    <Button variant="outline" size="sm" onClick={(e) => {
-                      e.preventDefault();
-                      // Mock functionality, would update state and call backend
-                      console.log(`Marking ${article.title} as complete`);
-                    }}>Mark as complete</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        // Mock functionality, would update state and call backend
+                        console.log(`Marking ${article.title} as complete`);
+                      }}
+                    >
+                      Mark as complete
+                    </Button>
                   )}
                 </div>
               </a>
@@ -129,4 +167,4 @@ const TrackPage = () => {
   );
 };
 
-export default TrackPage; 
+export default TrackPage;

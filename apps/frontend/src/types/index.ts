@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -10,6 +9,7 @@ export interface WikipediaArticle {
   title: string;
   url: string;
   description?: string;
+  completed?: boolean;
 }
 
 export interface Track {
