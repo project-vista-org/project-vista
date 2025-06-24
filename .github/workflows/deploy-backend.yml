@@ -36,13 +36,14 @@ on:
         - "t2.small"
         - "t2.medium"
 
+# These permissions are needed to interact with GitHub's OIDC Token endpoint for AWS authentication
+permissions:
+  id-token: write  # Required for requesting the JWT
+  contents: read   # Required for actions/checkout
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
-
-permissions:
-  id-token: write
-  contents: read
 
 jobs:
   test:
