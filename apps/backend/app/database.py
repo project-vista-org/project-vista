@@ -22,7 +22,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # Determine which connection method to use
 if all(
     [
-        False,
         AWS_ACCESS_KEY_ID,
         AWS_SECRET_ACCESS_KEY,
         RDS_HOST,

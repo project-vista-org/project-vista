@@ -14,6 +14,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:3000",
         "https://project-vista.pages.dev/",
+        "http://your-ec2-public-ip",  # Add your EC2 public IP or domain
     ],  # Add your frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
