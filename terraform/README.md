@@ -19,6 +19,36 @@ This directory contains Terraform code for provisioning AWS infrastructure for t
 
 2. After setting up the GitHub Actions role and configuring the GitHub repository variable, the main infrastructure will be deployed automatically by the CI/CD pipeline when changes are pushed to the main branch.
 
+## Using Existing VPC and Subnet
+
+The infrastructure is configured to work with existing VPCs and subnets to avoid hitting AWS VPC limits and prevent unnecessary resource creation. You can:
+
+1. **Use an existing VPC and subnet** - Provide the IDs in the GitHub Actions workflow inputs:
+   - `existing_vpc_id`: The ID of your existing VPC (e.g., vpc-0123456789abcdef0)
+   - `existing_subnet_id`: The ID of an existing public subnet (e.g., subnet-0123456789abcdef0)
+
+2. **Let Terraform find the default VPC** - Leave the VPC ID empty, and Terraform will attempt to use the default VPC
+
+3. **Find your VPCs** using the AWS CLI:
+   ```bash
+   aws ec2 describe-vpcs --region eu-north-1 --query 'Vpcs[*].{VpcId:VpcId,CidrBlock:CidrBlock,Name:Tags[?Key==`Name`].Value|[0],IsDefault:IsDefault}' --output table
+   ```
+
+4. **Find subnets** in a specific VPC:
+   ```bash
+   aws ec2 describe-subnets --region eu-north-1 --filters "Name=vpc-id,Values=vpc-YOUR_VPC_ID" --query 'Subnets[*].{SubnetId:SubnetId,CidrBlock:CidrBlock,AZ:AvailabilityZone,Public:MapPublicIpOnLaunch}' --output table
+   ```
+
+## Resource Management
+
+The infrastructure is designed to:
+
+1. **Reuse existing resources** when possible
+2. **Avoid recreation** of resources on subsequent deployments
+3. **Use unique names** for resources that can't be updated in-place
+
+This approach minimizes AWS costs and prevents hitting service limits.
+
 ## Manual Deployment
 
 If you need to deploy the main infrastructure manually:

@@ -2,47 +2,65 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Use data sources to fetch existing VPC and subnet
-data "aws_vpc" "existing" {
-  id = var.existing_vpc_id != "" ? var.existing_vpc_id : null
-
-  # If no VPC ID is provided, filter by name tag
-  dynamic "filter" {
-    for_each = var.existing_vpc_id == "" ? [1] : []
-    content {
-      name   = "tag:Name"
-      values = ["default"]
-    }
-  }
+locals {
+  vpc_id    = var.existing_vpc_id != "" ? var.existing_vpc_id : null
+  subnet_id = var.existing_subnet_id != "" ? var.existing_subnet_id : null
+  resource_prefix = "${var.project_name}-${var.environment}"
 }
 
-data "aws_subnet" "existing" {
-  id = var.existing_subnet_id != "" ? var.existing_subnet_id : null
+# Use data sources to fetch existing VPC
+data "aws_vpc" "existing" {
+  id = local.vpc_id
 
-  # If no subnet ID is provided, get the first public subnet from the VPC
+  # If no VPC ID is provided, filter by default VPC
   dynamic "filter" {
-    for_each = var.existing_subnet_id == "" ? [1] : []
+    for_each = local.vpc_id == null ? [1] : []
     content {
-      name   = "vpc-id"
-      values = [data.aws_vpc.existing.id]
-    }
-  }
-
-  # Prefer a public subnet if available
-  dynamic "filter" {
-    for_each = var.existing_subnet_id == "" ? [1] : []
-    content {
-      name   = "map-public-ip-on-launch"
+      name   = "isDefault"
       values = ["true"]
     }
   }
 }
 
-# Security group
+# Use data source to fetch existing subnet
+data "aws_subnet" "existing" {
+  vpc_id = data.aws_vpc.existing.id
+  id     = local.subnet_id
+
+  # If no subnet ID is provided, get a public subnet from the VPC
+  dynamic "filter" {
+    for_each = local.subnet_id == null ? [1] : []
+    content {
+      name   = "map-public-ip-on-launch"
+      values = ["true"]
+    }
+  }
+
+  # Only needed if no subnet ID is provided
+  dynamic "filter" {
+    for_each = local.subnet_id == null ? [1] : []
+    content {
+      name   = "availability-zone"
+      values = ["${var.aws_region}a"]
+    }
+  }
+}
+
+# Security group - use for_each to prevent recreation
 resource "aws_security_group" "web" {
-  name        = "${var.project_name}-web-sg"
+  name        = "${local.resource_prefix}-web-sg"
   description = "Allow web and SSH traffic"
   vpc_id      = data.aws_vpc.existing.id
+
+  # Only create if it doesn't exist
+  lifecycle {
+    create_before_destroy = true
+    # Prevent changes to name to avoid recreation
+    ignore_changes = [
+      name,
+      description
+    ]
+  }
 
   ingress {
     from_port   = 80
@@ -73,7 +91,10 @@ resource "aws_security_group" "web" {
   }
 
   tags = {
-    Name = "${var.project_name}-web-sg"
+    Name        = "${local.resource_prefix}-web-sg"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
   }
 }
 
@@ -95,13 +116,19 @@ data "aws_ami" "amazon_linux" {
 
 # EC2 instance - using t2.micro which is free tier eligible
 resource "aws_instance" "web" {
-  # Use region-specific free tier AMIs
   ami                    = data.aws_ami.amazon_linux.id
-
   instance_type          = var.instance_type
   subnet_id              = data.aws_subnet.existing.id
   vpc_security_group_ids = [aws_security_group.web.id]
   key_name               = var.key_name
+
+  # Prevent unnecessary replacements
+  lifecycle {
+    ignore_changes = [
+      ami,            # Allow AMI updates without replacing instance
+      user_data      # Allow user_data updates without replacing instance
+    ]
+  }
 
   # Free tier eligible EBS volume
   root_block_device {
@@ -110,7 +137,10 @@ resource "aws_instance" "web" {
   }
 
   tags = {
-    Name = "${var.project_name}-backend"
+    Name        = "${local.resource_prefix}-backend"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
   }
 
   user_data = <<-EOF
@@ -124,14 +154,15 @@ resource "aws_instance" "web" {
               EOF
 }
 
-# Budget alarm for $1 threshold
-resource "aws_budgets_budget" "zero_cost_budget" {
-  name              = "${var.project_name}-minimal-cost-budget"
+# Budget alarm with unique name to prevent conflicts
+resource "aws_budgets_budget" "cost_budget" {
+  name              = "${local.resource_prefix}-cost-budget-${formatdate("YYYYMMDD", timestamp())}"
   budget_type       = "COST"
   limit_amount      = "1"  # Minimum allowed is $1
   limit_unit        = "USD"
   time_unit         = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-DD_hh:mm", timestamp())
+  time_period_end   = "2087-06-15_00:00"  # Far future date
 
   notification {
     comparison_operator        = "GREATER_THAN"
@@ -139,6 +170,13 @@ resource "aws_budgets_budget" "zero_cost_budget" {
     threshold_type             = "PERCENTAGE"
     notification_type          = "ACTUAL"
     subscriber_email_addresses = [var.notification_email]
+  }
+
+  # Prevent recreation on each apply
+  lifecycle {
+    ignore_changes = [
+      time_period_start
+    ]
   }
 }
 
