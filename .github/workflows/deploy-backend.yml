@@ -70,8 +70,8 @@ jobs:
       environment: ${{ github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
       instance_type: ${{ github.event.inputs.instance_type || 't2.micro' }}
-      existing_vpc_id: ${{ github.event.inputs.existing_vpc_id || '' }}
-      existing_subnet_id: ${{ github.event.inputs.existing_subnet_id || '' }}
+      existing_vpc_id: "vpc-0dafdafe8c44a431c"
+      existing_subnet_id: "subnet-05917f37a18a5a172"
     secrets: inherit
 
   build:
