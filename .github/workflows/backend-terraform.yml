@@ -18,6 +18,16 @@ on:
         required: true
         type: string
         default: "t2.micro"
+      existing_vpc_id:
+        description: 'ID of an existing VPC to use'
+        required: false
+        type: string
+        default: ""
+      existing_subnet_id:
+        description: 'ID of an existing subnet to use'
+        required: false
+        type: string
+        default: ""
     outputs:
       instance_ip:
         description: "The public IP of the created EC2 instance"
@@ -35,6 +45,8 @@ jobs:
       ENVIRONMENT: ${{ inputs.environment }}
       TF_VAR_environment: ${{ inputs.environment }}
       TF_VAR_instance_type: ${{ inputs.instance_type }}
+      TF_VAR_existing_vpc_id: ${{ inputs.existing_vpc_id }}
+      TF_VAR_existing_subnet_id: ${{ inputs.existing_subnet_id }}
       # Reduce AWS SDK logging verbosity
       AWS_STS_REGIONAL_ENDPOINTS: regional
       AWS_RETRY_MODE: standard
@@ -71,7 +83,12 @@ jobs:
         id: plan
         run: |
           cd terraform/main-infra
-          terraform plan -var="environment=${{ env.ENVIRONMENT }}" -var="instance_type=${{ inputs.instance_type }}" -out=tfplan
+          terraform plan \
+            -var="environment=${{ env.ENVIRONMENT }}" \
+            -var="instance_type=${{ inputs.instance_type }}" \
+            -var="existing_vpc_id=${{ inputs.existing_vpc_id }}" \
+            -var="existing_subnet_id=${{ inputs.existing_subnet_id }}" \
+            -out=tfplan
 
       - name: Terraform Apply
         id: apply

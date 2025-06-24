@@ -86,7 +86,19 @@ resource "aws_iam_policy" "ec2_policy" {
           "ec2:DescribeSubnets",
           "ec2:DescribeVpcs",
           "ec2:DescribeAvailabilityZones",
-          "ec2:DescribeKeyPairs"
+          "ec2:DescribeKeyPairs",
+          "ec2:DescribeRouteTables",
+          "ec2:DescribeInternetGateways",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:CreateTags",
+          "ec2:RunInstances",
+          "ec2:TerminateInstances",
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupEgress"
         ]
         Resource = "*"
       }

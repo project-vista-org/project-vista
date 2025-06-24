@@ -30,6 +30,31 @@ terraform plan -var="environment=dev" -var="instance_type=t2.micro"
 terraform apply -var="environment=dev" -var="instance_type=t2.micro"
 ```
 
+### Using an Existing VPC
+
+If you've hit the VPC limit in your AWS account, you can use an existing VPC instead of creating a new one:
+
+```bash
+cd main-infra
+terraform init
+terraform plan \
+  -var="environment=dev" \
+  -var="instance_type=t2.micro" \
+  -var="existing_vpc_id=vpc-12345678" \
+  -var="existing_subnet_id=subnet-12345678"
+terraform apply \
+  -var="environment=dev" \
+  -var="instance_type=t2.micro" \
+  -var="existing_vpc_id=vpc-12345678" \
+  -var="existing_subnet_id=subnet-12345678"
+```
+
+You can also leave `existing_subnet_id` empty to automatically select a public subnet from the VPC:
+
+```bash
+terraform apply -var="existing_vpc_id=vpc-12345678"
+```
+
 ## Variables
 
 Common variables used across modules:
@@ -38,6 +63,8 @@ Common variables used across modules:
 - `environment`: Environment name (dev, prod, etc.)
 - `project_name`: Project name for resource tagging
 - `instance_type`: EC2 instance type (default: "t2.micro")
+- `existing_vpc_id`: ID of an existing VPC to use (optional)
+- `existing_subnet_id`: ID of an existing subnet to use (optional)
 
 ## Outputs
 
@@ -46,7 +73,7 @@ Common variables used across modules:
 ## Architecture
 
 The infrastructure includes:
-- VPC with public subnet in eu-north-1b
+- VPC with public subnet in eu-north-1b (or an existing VPC)
 - Security groups for web traffic
 - EC2 instance for hosting the backend
 - Docker for containerization

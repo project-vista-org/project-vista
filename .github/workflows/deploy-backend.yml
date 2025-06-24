@@ -35,6 +35,16 @@ on:
         - "t2.micro"
         - "t2.small"
         - "t2.medium"
+      existing_vpc_id:
+        description: 'ID of an existing VPC to use (leave empty to use default VPC)'
+        required: false
+        type: string
+        default: ""
+      existing_subnet_id:
+        description: 'ID of an existing subnet to use (leave empty to auto-select a public subnet)'
+        required: false
+        type: string
+        default: ""
 
 # These permissions are needed to interact with GitHub's OIDC Token endpoint for AWS authentication
 permissions:
@@ -60,6 +70,8 @@ jobs:
       environment: ${{ github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
       instance_type: ${{ github.event.inputs.instance_type || 't2.micro' }}
+      existing_vpc_id: ${{ github.event.inputs.existing_vpc_id || '' }}
+      existing_subnet_id: ${{ github.event.inputs.existing_subnet_id || '' }}
     secrets: inherit
 
   build:
