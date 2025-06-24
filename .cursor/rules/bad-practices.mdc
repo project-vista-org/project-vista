@@ -37,6 +37,46 @@ This document outlines common anti-patterns to avoid when modifying code in this
 # glob.glob('*.jpg') + glob.glob('*.png')
 ```
 
+## Unpinned Package Versions
+
+- **Don't** add packages to requirements.txt without pinning specific versions
+- **Don't** use version ranges (e.g., `>=2.0.0,<3.0.0`) in production requirements
+- **Don't** use the latest version marker (`package==*`) in requirements
+- **Do** always specify exact versions (e.g., `package==1.2.3`)
+- **Do** test package upgrades thoroughly before updating version pins
+
+### Example of what to avoid:
+
+```
+# Don't do this:
+fastapi
+sqlmodel
+boto3>=1.20.0
+
+# Do this instead:
+fastapi==0.115.13
+sqlmodel==0.0.24
+boto3==1.38.42
+```
+
+## Imports Not Reflected in Requirements
+
+- **Don't** add new imports to the code without updating requirements.txt
+- **Don't** change import statements without ensuring requirements.txt is in sync
+- **Don't** remove imports from code without checking if they should be removed from requirements
+- **Do** immediately update requirements.txt when adding or changing imports
+- **Do** run `pip freeze` to get the exact versions of newly added packages
+
+### Example of what to avoid:
+
+```python
+# Adding this import:
+import boto3
+
+# Without adding to requirements.txt:
+# boto3==1.38.42
+```
+
 ## Unnecessary Import Fallbacks
 
 - **Don't** add try/except blocks around imports unless you've confirmed the imported module may be legitimately missing in some environments
