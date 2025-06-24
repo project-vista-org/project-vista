@@ -24,64 +24,41 @@ on:
         value: ${{ jobs.terraform.outputs.instance_ip }}
 
 jobs:
+  test:
+    # Run tests first
+    uses: ./.github/workflows/backend-test.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+    secrets: inherit
+
   terraform:
-    runs-on: ubuntu-latest
-    env:
-      AWS_REGION: ${{ inputs.aws_region }}
-      ENVIRONMENT: ${{ inputs.environment }}
-      INSTANCE_TYPE: ${{ inputs.instance_type }}
-    outputs:
-      instance_ip: ${{ steps.terraform_output.outputs.instance_ip }}
+    # Run terraform after tests pass
+    needs: test
+    uses: ./.github/workflows/backend-terraform.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+      instance_type: ${{ github.event.inputs.instance_type || 't2.micro' }}
+      use_access_keys: ${{ github.event.inputs.use_access_keys || 'false' }}
+    secrets: inherit
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  build:
+    # Build after infrastructure is ready
+    needs: terraform
+    uses: ./.github/workflows/backend-build.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+    secrets: inherit
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-          mask-aws-account-id: true
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Terraform Init
-        run: |
-          cd terraform
-          terraform init
-
-      - name: Terraform Plan
-        run: |
-          cd terraform
-          terraform plan \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="instance_type=${{ env.INSTANCE_TYPE }}" \
-            -var="project_name=vista-${{ env.ENVIRONMENT }}" \
-            -var="environment=${{ env.ENVIRONMENT }}" \
-            -var="github_owner=${{ github.repository_owner }}" \
-            -var="github_repo=${{ github.event.repository.name }}"
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-        run: |
-          cd terraform
-          terraform apply -auto-approve \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="instance_type=${{ env.INSTANCE_TYPE }}" \
-            -var="project_name=vista-${{ env.ENVIRONMENT }}" \
-            -var="environment=${{ env.ENVIRONMENT }}" \
-            -var="github_owner=${{ github.repository_owner }}" \
-            -var="github_repo=${{ github.event.repository.name }}"
-
-          # Extract and save the GitHub Actions role ARN for use in repository variables
-          ROLE_ARN=$(terraform output -raw github_actions_role_arn)
-          echo "GitHub Actions Role ARN: $ROLE_ARN"
-          echo "GITHUB_ACTIONS_ROLE_ARN=$ROLE_ARN" >> $GITHUB_ENV
-
-      - name: Save Terraform Output
-        id: terraform_output
-        run: |
-          cd terraform
-          echo "instance_ip=$(terraform output -raw instance_ip)" >> $GITHUB_OUTPUT
+  deploy:
+    # Deploy after build is complete
+    needs: [build, terraform]
+    uses: ./.github/workflows/backend-deploy.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+      image_tag: ${{ needs.build.outputs.image_tag }}
+      instance_ip: ${{ needs.terraform.outputs.instance_ip }}
+    secrets: inherit

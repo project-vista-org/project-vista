@@ -182,3 +182,38 @@ def new_function(param):
 ```
 
 Remember to maintain consistency with the existing codebase. When in doubt, mimic the style of the surrounding code.
+
+## Never Use Global AWS Keys
+
+- **Never** store or use global AWS access keys on development machines
+- **Never** commit AWS credentials to version control or display them in logs/output
+- **Never** use long-lived access keys for authentication when alternatives exist
+- **Do** use temporary credentials via AWS SSO, IAM roles, or federation
+- **Do** use environment-specific credential profiles when keys are absolutely necessary
+- **Do** rotate credentials regularly and use the principle of least privilege
+- **Do** ask the user to authenticate with AWS CLI first before running AWS commands
+
+### Example of what to avoid:
+
+```bash
+# NEVER do this:
+aws configure set aws_access_key_id AKIAXXXXXXXXXXXXXXXX
+aws configure set aws_secret_access_key AbCdEfGhIjKlMnOpQrStUvWxYz1234567890AbCd
+
+# NEVER do this:
+export AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXX
+export AWS_SECRET_ACCESS_KEY=AbCdEfGhIjKlMnOpQrStUvWxYz1234567890AbCd
+
+# NEVER store credentials globally in ~/.aws/credentials
+```
+
+### Example of what to do instead:
+
+```bash
+# Ask user to authenticate first
+echo "Please authenticate with AWS using: aws sso login --profile your-profile"
+
+# Wait for authentication confirmation before proceeding
+# Then use the authenticated profile
+aws --profile your-profile s3 ls
+```

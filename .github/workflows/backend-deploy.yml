@@ -8,6 +8,11 @@ on:
         required: true
         type: string
         default: "dev"
+      role-to-assume:
+        required: false
+        type: string
+        description: "AWS role to assume"
+        default: ''
       aws_region:
         description: 'AWS region to deploy to'
         required: true
@@ -36,12 +41,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials with Assume Role
+        if: ${{ inputs.role-to-assume != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ inputs.role-to-assume }}
           aws-region: ${{ env.AWS_REGION }}
-          mask-aws-account-id: true
+
+      - name: Configure AWS credentials with access key
+        if: ${{ inputs.role-to-assume == '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
