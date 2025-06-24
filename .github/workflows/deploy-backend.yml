@@ -7,7 +7,7 @@ on:
       - 'apps/backend/**'
       - 'terraform/**'
       - '.github/workflows/deploy-backend.yml'
-      - '.github/workflows/jobs/**'
+      - '.github/workflows/backend-*.yml'
   workflow_dispatch:
     inputs:
       environment:
@@ -46,7 +46,7 @@ permissions:
 
 jobs:
   test:
-    uses: ./.github/workflows/jobs/test.yml
+    uses: ./.github/workflows/backend-test.yml
     with:
       environment: ${{ github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
@@ -54,7 +54,7 @@ jobs:
 
   build:
     needs: test
-    uses: ./.github/workflows/jobs/build.yml
+    uses: ./.github/workflows/backend-build.yml
     with:
       environment: ${{ github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
@@ -62,7 +62,7 @@ jobs:
 
   terraform:
     needs: build
-    uses: ./.github/workflows/jobs/terraform.yml
+    uses: ./.github/workflows/backend-terraform.yml
     with:
       environment: ${{ github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
@@ -71,7 +71,7 @@ jobs:
 
   deploy:
     needs: [build, terraform]
-    uses: ./.github/workflows/jobs/deploy.yml
+    uses: ./.github/workflows/backend-deploy.yml
     with:
       environment: ${{ github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
