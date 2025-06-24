@@ -33,3 +33,15 @@ variable "notification_email" {
   type        = string
   default     = "your-email@example.com"  # Replace with your actual email
 }
+
+variable "existing_vpc_id" {
+  description = "ID of an existing VPC to use instead of creating a new one"
+  type        = string
+  default     = ""  # Will be provided during deployment
+}
+
+variable "existing_subnet_id" {
+  description = "ID of an existing public subnet to use instead of creating a new one"
+  type        = string
+  default     = ""  # Will be provided during deployment
+}

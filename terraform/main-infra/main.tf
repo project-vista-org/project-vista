@@ -2,59 +2,47 @@ provider "aws" {
   region = var.aws_region
 }
 
-# VPC and networking
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+# Use data sources to fetch existing VPC and subnet
+data "aws_vpc" "existing" {
+  id = var.existing_vpc_id != "" ? var.existing_vpc_id : null
 
-  tags = {
-    Name = "${var.project_name}-vpc"
+  # If no VPC ID is provided, filter by name tag
+  dynamic "filter" {
+    for_each = var.existing_vpc_id == "" ? [1] : []
+    content {
+      name   = "tag:Name"
+      values = ["default"]
+    }
   }
 }
 
-resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "${var.aws_region}a"
-  map_public_ip_on_launch = true
+data "aws_subnet" "existing" {
+  id = var.existing_subnet_id != "" ? var.existing_subnet_id : null
 
-  tags = {
-    Name = "${var.project_name}-public-subnet"
-  }
-}
-
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "${var.project_name}-igw"
-  }
-}
-
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
+  # If no subnet ID is provided, get the first public subnet from the VPC
+  dynamic "filter" {
+    for_each = var.existing_subnet_id == "" ? [1] : []
+    content {
+      name   = "vpc-id"
+      values = [data.aws_vpc.existing.id]
+    }
   }
 
-  tags = {
-    Name = "${var.project_name}-public-rt"
+  # Prefer a public subnet if available
+  dynamic "filter" {
+    for_each = var.existing_subnet_id == "" ? [1] : []
+    content {
+      name   = "map-public-ip-on-launch"
+      values = ["true"]
+    }
   }
-}
-
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
 }
 
 # Security group
 resource "aws_security_group" "web" {
   name        = "${var.project_name}-web-sg"
   description = "Allow web and SSH traffic"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.existing.id
 
   ingress {
     from_port   = 80
@@ -111,7 +99,7 @@ resource "aws_instance" "web" {
   ami                    = data.aws_ami.amazon_linux.id
 
   instance_type          = var.instance_type
-  subnet_id              = aws_subnet.public.id
+  subnet_id              = data.aws_subnet.existing.id
   vpc_security_group_ids = [aws_security_group.web.id]
   key_name               = var.key_name
 
