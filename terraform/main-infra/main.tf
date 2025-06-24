@@ -97,7 +97,7 @@ resource "aws_instance" "web" {
     "eu-north-1" = "ami-0989fb15ce71ba39e" # Amazon Linux 2 AMI for eu-north-1
   }[var.aws_region]
 
-  instance_type          = "t2.micro" # Forcing t2.micro for free tier eligibility
+  instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.web.id]
   key_name               = var.key_name
@@ -124,6 +124,6 @@ resource "aws_instance" "web" {
 }
 
 # Output the public IP
-output "instance_ip" {
+output "instance_public_ip" {
   value = aws_instance.web.public_ip
 }

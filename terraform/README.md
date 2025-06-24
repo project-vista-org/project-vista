@@ -1,6 +1,47 @@
-# Project Vista Infrastructure
+# Terraform Infrastructure
 
-This directory contains Terraform configurations to provision the AWS infrastructure for Project Vista.
+This directory contains Terraform code for provisioning AWS infrastructure for the Vista project.
+
+## Directory Structure
+
+- **`main-infra/`**: Contains the main infrastructure code (VPC, EC2, etc.)
+- **`github-actions-role/`**: Contains the GitHub Actions OIDC provider and IAM role setup (separate module)
+
+## Setup Order
+
+1. First, set up the GitHub Actions role:
+   ```bash
+   cd github-actions-role
+   terraform init
+   terraform apply
+   ```
+   See the [GitHub Actions Role README](./github-actions-role/README.md) for detailed instructions.
+
+2. After setting up the GitHub Actions role and configuring the GitHub repository variable, the main infrastructure will be deployed automatically by the CI/CD pipeline when changes are pushed to the main branch.
+
+## Manual Deployment
+
+If you need to deploy the main infrastructure manually:
+
+```bash
+cd main-infra
+terraform init
+terraform plan -var="environment=dev" -var="instance_type=t2.micro"
+terraform apply -var="environment=dev" -var="instance_type=t2.micro"
+```
+
+## Variables
+
+Common variables used across modules:
+
+- `aws_region`: AWS region to deploy resources (default: "eu-north-1")
+- `environment`: Environment name (dev, prod, etc.)
+- `project_name`: Project name for resource tagging
+- `instance_type`: EC2 instance type (default: "t2.micro")
+
+## Outputs
+
+- `instance_public_ip`: Public IP of the EC2 instance
 
 ## Architecture
 
@@ -30,28 +71,6 @@ Replace `i-1234567890abcdef0` with your actual instance ID.
 - [Terraform](https://www.terraform.io/downloads.html) installed
 - AWS credentials configured
 - SSH key pair created in AWS
-
-## Manual Deployment
-
-1. Initialize Terraform:
-   ```bash
-   terraform init
-   ```
-
-2. Plan the deployment:
-   ```bash
-   terraform plan
-   ```
-
-3. Apply the configuration:
-   ```bash
-   terraform apply
-   ```
-
-4. Get the EC2 instance IP:
-   ```bash
-   terraform output instance_ip
-   ```
 
 ## CI/CD Pipeline
 

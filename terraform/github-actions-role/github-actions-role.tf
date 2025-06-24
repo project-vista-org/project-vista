@@ -1,6 +1,10 @@
 # GitHub Actions OIDC Provider and IAM Role
 # This allows GitHub Actions to assume a role in AWS without storing long-lived credentials
 
+provider "aws" {
+  region = var.aws_region
+}
+
 resource "aws_iam_openid_connect_provider" "github_actions" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]

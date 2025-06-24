@@ -35,6 +35,13 @@ jobs:
       ENVIRONMENT: ${{ inputs.environment }}
       TF_VAR_environment: ${{ inputs.environment }}
       TF_VAR_instance_type: ${{ inputs.instance_type }}
+      # Reduce AWS SDK logging verbosity
+      AWS_STS_REGIONAL_ENDPOINTS: regional
+      AWS_RETRY_MODE: standard
+      AWS_METADATA_SERVICE_TIMEOUT: 2
+      AWS_METADATA_SERVICE_NUM_ATTEMPTS: 2
+      AWS_SDK_LOAD_CONFIG: 1
+      AWS_EC2_METADATA_DISABLED: true
     outputs:
       instance_ip: ${{ steps.terraform_output.outputs.instance_ip }}
 
@@ -57,24 +64,24 @@ jobs:
       - name: Terraform Init
         id: init
         run: |
-          cd terraform
+          cd terraform/main-infra
           terraform init
 
       - name: Terraform Plan
         id: plan
         run: |
-          cd terraform
+          cd terraform/main-infra
           terraform plan -var="environment=${{ env.ENVIRONMENT }}" -var="instance_type=${{ inputs.instance_type }}" -out=tfplan
 
       - name: Terraform Apply
         id: apply
         run: |
-          cd terraform
+          cd terraform/main-infra
           terraform apply -auto-approve tfplan
 
       - name: Terraform Output
         id: terraform_output
         run: |
-          cd terraform
+          cd terraform/main-infra
           INSTANCE_IP=$(terraform output -raw instance_public_ip)
           echo "instance_ip=${INSTANCE_IP}" >> $GITHUB_OUTPUT
