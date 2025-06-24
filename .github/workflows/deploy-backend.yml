@@ -49,7 +49,7 @@ jobs:
     env:
       AWS_REGION: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
       ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-      SECRETS_PREFIX: "/vista/${{ github.event.inputs.environment || 'dev' }}/backend"
+      SECRETS_PREFIX: "/${{ github.event.inputs.environment || 'dev' }}/backend"
     outputs:
       image_tag: ${{ steps.build_push.outputs.image_tag }}
 
