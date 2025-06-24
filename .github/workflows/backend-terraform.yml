@@ -17,7 +17,7 @@ on:
         description: 'EC2 instance type'
         required: true
         type: string
-        default: "t2.micro"
+        default: "t3.micro"
       existing_vpc_id:
         description: 'ID of an existing VPC to use'
         required: false

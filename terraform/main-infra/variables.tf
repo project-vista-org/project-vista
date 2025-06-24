@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t2.micro"
+  default     = "t3.micro"
 }
 
 variable "key_name" {
@@ -31,17 +31,17 @@ variable "environment" {
 variable "notification_email" {
   description = "Email address to receive budget notifications"
   type        = string
-  default     = "your-email@example.com"  # Replace with your actual email
+  default     = "alonemanuel95@gmail.com"  # Replace with your email
 }
 
 variable "existing_vpc_id" {
-  description = "ID of an existing VPC to use instead of creating a new one"
+  description = "ID of an existing VPC to use"
   type        = string
-  default     = ""  # Will be provided during deployment
+  default     = ""
 }
 
 variable "existing_subnet_id" {
-  description = "ID of an existing public subnet to use instead of creating a new one"
+  description = "ID of an existing subnet to use"
   type        = string
-  default     = ""  # Will be provided during deployment
+  default     = ""
 }
