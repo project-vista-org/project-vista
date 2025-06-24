@@ -21,6 +21,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint
+    permissions:
+      id-token: write  # Required for requesting the JWT
+      contents: read   # Required for actions/checkout
     env:
       AWS_REGION: ${{ inputs.aws_region }}
       ENVIRONMENT: ${{ inputs.environment }}

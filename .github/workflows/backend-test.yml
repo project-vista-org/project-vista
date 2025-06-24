@@ -17,6 +17,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # These permissions are needed if we need to access AWS resources during tests
+    permissions:
+      id-token: write  # Required for requesting the JWT
+      contents: read   # Required for actions/checkout
     env:
       AWS_REGION: ${{ inputs.aws_region }}
       ENVIRONMENT: ${{ inputs.environment }}
