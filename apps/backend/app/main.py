@@ -10,15 +10,10 @@ app = FastAPI(title="Project Vista API", version="1.0.0")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://project-vista.pages.dev/",
-        "http://your-ec2-public-ip",  # Add your EC2 public IP or domain
-    ],  # Add your frontend URLs
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 
