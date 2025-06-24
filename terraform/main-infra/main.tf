@@ -89,13 +89,26 @@ resource "aws_security_group" "web" {
   }
 }
 
+# Use a data source to get the latest Amazon Linux 2 AMI
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 # EC2 instance - using t2.micro which is free tier eligible
 resource "aws_instance" "web" {
   # Use region-specific free tier AMIs
-  ami = {
-    "us-east-1" = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI for us-east-1
-    "eu-north-1" = "ami-0989fb15ce71ba39e" # Amazon Linux 2 AMI for eu-north-1
-  }[var.aws_region]
+  ami                    = data.aws_ami.amazon_linux.id
 
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public.id
@@ -123,19 +136,19 @@ resource "aws_instance" "web" {
               EOF
 }
 
-# Budget alarm for $0 threshold
+# Budget alarm for $1 threshold
 resource "aws_budgets_budget" "zero_cost_budget" {
-  name              = "${var.project_name}-zero-cost-budget"
+  name              = "${var.project_name}-minimal-cost-budget"
   budget_type       = "COST"
-  limit_amount      = "0"
+  limit_amount      = "1"  # Minimum allowed is $1
   limit_unit        = "USD"
   time_unit         = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-DD_hh:mm", timestamp())
 
   notification {
     comparison_operator        = "GREATER_THAN"
-    threshold                  = 0
-    threshold_type             = "ABSOLUTE_VALUE"
+    threshold                  = 0.01  # Notify at 1 cent (1% of $1)
+    threshold_type             = "PERCENTAGE"
     notification_type          = "ACTUAL"
     subscriber_email_addresses = [var.notification_email]
   }
