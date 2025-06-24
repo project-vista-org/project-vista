@@ -9,9 +9,14 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      console.log("Auth callback started");
+      console.log("Current URL:", window.location.href);
+      console.log("API base URL:", import.meta.env.VITE_API_BASE_URL);
+
       try {
         const { data, error } = await supabase.auth.getSession();
 
+        console.log("Session data:", data);
         if (error) {
           console.error("Auth callback error:", error);
           setError("Authentication failed. Please try again.");
@@ -20,6 +25,29 @@ const AuthCallback = () => {
         }
 
         if (data.session) {
+          // Get the access token
+          const token = data.session.access_token;
+
+          // Call the backend API to register/update the user in our database
+          try {
+            const response = await fetch(
+              `${import.meta.env.VITE_API_BASE_URL}/api/user/profile`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              },
+            );
+
+            if (!response.ok) {
+              console.warn("User profile sync warning:", await response.text());
+              // Continue even if this fails - the user is still authenticated with Supabase
+            }
+          } catch (apiError) {
+            console.warn("Failed to sync user with backend:", apiError);
+            // Continue even if this fails - the user is still authenticated with Supabase
+          }
+
           // Successfully authenticated, redirect to home
           navigate("/", { replace: true });
         } else {

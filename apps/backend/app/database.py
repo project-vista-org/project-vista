@@ -21,7 +21,14 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Determine which connection method to use
 if all(
-    [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, RDS_HOST, RDS_DATABASE, RDS_USERNAME]
+    [
+        False,
+        AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY,
+        RDS_HOST,
+        RDS_DATABASE,
+        RDS_USERNAME,
+    ]
 ):
     # Get an RDS IAM authentication token
     def get_rds_auth_token():

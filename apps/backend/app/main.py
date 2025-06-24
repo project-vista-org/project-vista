@@ -1,3 +1,4 @@
+import uvicorn
 from apps.backend.app.auth import get_current_user
 from apps.backend.app.database import create_db_and_tables
 from apps.backend.app.routes import tracks
@@ -49,3 +50,7 @@ def health_check():
 
 # Include routers
 app.include_router(tracks.router)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -18,6 +18,30 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         data: { user },
       } = await supabase.auth.getUser();
       setUser(user);
+
+      // If user exists, sync with backend
+      if (user) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+
+          if (token) {
+            // Sync user with backend database
+            await fetch(
+              `${import.meta.env.VITE_API_BASE_URL}/api/user/profile`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              },
+            );
+          }
+        } catch (error) {
+          console.warn("Failed to sync user with backend:", error);
+          // Continue even if this fails
+        }
+      }
+
       setIsLoading(false);
     };
 
