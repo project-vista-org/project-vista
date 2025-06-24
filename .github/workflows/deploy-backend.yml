@@ -1,4 +1,4 @@
-name: Deploy Backend
+name: "Deploy Backend"
 
 on:
   push:
@@ -7,12 +7,55 @@ on:
       - 'apps/backend/**'
       - 'terraform/**'
       - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        default: "dev"
+        options:
+        - "dev"
+        - "prod"
+      aws_region:
+        description: 'AWS region to deploy to'
+        required: true
+        type: choice
+        default: "eu-north-1"
+        options:
+        - "eu-north-1"
+        - "us-east-1"
+      instance_type:
+        description: 'EC2 instance type'
+        required: true
+        type: choice
+        default: "t2.micro"
+        options:
+        - "t2.micro"
+        - "t2.small"
+        - "t2.medium"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+      SECRETS_PREFIX: "/vista/${{ github.event.inputs.environment || 'dev' }}/backend"
+    outputs:
+      image_tag: ${{ steps.build_push.outputs.image_tag }}
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -36,16 +79,18 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build, tag, and push image to Amazon ECR
+        id: build_push
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: vista-backend
+          ECR_REPOSITORY: vista-backend-${{ env.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           # Create the repository if it doesn't exist
@@ -58,14 +103,31 @@ jobs:
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-          # Save the image URI for later use
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          # Save the image tag for later use
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "image_uri=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
   terraform:
     needs: build-and-test
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+      INSTANCE_TYPE: ${{ github.event.inputs.instance_type || 't2.micro' }}
+    outputs:
+      instance_ip: ${{ steps.terraform_output.outputs.instance_ip }}
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -74,53 +136,91 @@ jobs:
         run: |
           cd terraform
           terraform init
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Terraform Plan
         run: |
           cd terraform
-          terraform plan
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          terraform plan \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="instance_type=${{ env.INSTANCE_TYPE }}" \
+            -var="project_name=vista-${{ env.ENVIRONMENT }}"
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         run: |
           cd terraform
-          terraform apply -auto-approve
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          terraform apply -auto-approve \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="instance_type=${{ env.INSTANCE_TYPE }}" \
+            -var="project_name=vista-${{ env.ENVIRONMENT }}"
 
       - name: Save Terraform Output
-        if: github.ref == 'refs/heads/main'
         id: terraform_output
         run: |
           cd terraform
-          echo "::set-output name=instance_ip::$(terraform output -raw instance_ip)"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          echo "instance_ip=$(terraform output -raw instance_ip)" >> $GITHUB_OUTPUT
 
   deploy:
     needs: [build-and-test, terraform]
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+      SECRETS_PREFIX: "/${{ github.event.inputs.environment || 'dev' }}/backend"
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Get secrets from AWS Secrets Manager
+        id: secrets
+        run: |
+          # Fetch database URL
+          DATABASE_URL_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/DATABASE_URL" --query SecretString --output text || echo "")
+          if [ -z "$DATABASE_URL_SECRET" ]; then
+            echo "Using DATABASE_URL from GitHub secrets as fallback"
+            DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          else
+            echo "Using DATABASE_URL from AWS Secrets Manager"
+            DATABASE_URL="$DATABASE_URL_SECRET"
+          fi
+
+          # Fetch Supabase URL
+          SUPABASE_URL_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/SUPABASE_URL" --query SecretString --output text || echo "")
+          if [ -z "$SUPABASE_URL_SECRET" ]; then
+            echo "Using SUPABASE_URL from GitHub secrets as fallback"
+            SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+          else
+            echo "Using SUPABASE_URL from AWS Secrets Manager"
+            SUPABASE_URL="$SUPABASE_URL_SECRET"
+          fi
+
+          # Fetch Supabase service role key
+          SUPABASE_KEY_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/SUPABASE_SERVICE_ROLE_KEY" --query SecretString --output text || echo "")
+          if [ -z "$SUPABASE_KEY_SECRET" ]; then
+            echo "Using SUPABASE_SERVICE_ROLE_KEY from GitHub secrets as fallback"
+            SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          else
+            echo "Using SUPABASE_SERVICE_ROLE_KEY from AWS Secrets Manager"
+            SUPABASE_KEY="$SUPABASE_KEY_SECRET"
+          fi
+
+          # Store secrets securely in environment variables
+          echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
+          echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
+          echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
@@ -146,7 +246,7 @@ jobs:
 
             cat > ~/.aws/config << EOL
             [default]
-            region=eu-north-1
+            region=${{ env.AWS_REGION }}
             EOL
 
             # Login to ECR
@@ -160,14 +260,15 @@ jobs:
             version: '3'
             services:
               backend:
-                image: ${{ steps.login-ecr.outputs.registry }}/vista-backend:latest
+                image: ${{ steps.login-ecr.outputs.registry }}/vista-backend-${{ env.ENVIRONMENT }}:${{ needs.build-and-test.outputs.image_tag }}
                 ports:
                   - "80:8000"
                 restart: always
                 environment:
-                  - DATABASE_URL=${{ secrets.DATABASE_URL }}
-                  - SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-                  - SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+                  - DATABASE_URL=${{ env.DATABASE_URL }}
+                  - SUPABASE_URL=${{ env.SUPABASE_URL }}
+                  - SUPABASE_SERVICE_ROLE_KEY=${{ env.SUPABASE_KEY }}
+                  - ENVIRONMENT=${{ env.ENVIRONMENT }}
             EOL
 
             # Pull and start containers
