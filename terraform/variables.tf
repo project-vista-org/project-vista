@@ -37,5 +37,5 @@ variable "github_owner" {
 variable "github_repo" {
   description = "GitHub repository name"
   type        = string
-  default     = "the-vista-project" # Replace with your repository name
+  default     = "project-vista" # Replace with your repository name
 }

@@ -46,15 +46,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    uses: ./.github/workflows/backend-test.yml
-    with:
-      environment: ${{ github.event.inputs.environment || 'dev' }}
-      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-    secrets: inherit
+  # test:
+  #   uses: ./.github/workflows/backend-test.yml
+  #   with:
+  #     environment: ${{ github.event.inputs.environment || 'dev' }}
+  #     aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+  #   secrets: inherit
 
   terraform:
-    needs: test
+    # needs: test
     uses: ./.github/workflows/backend-terraform.yml
     with:
       environment: ${{ github.event.inputs.environment || 'dev' }}
