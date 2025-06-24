@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from apps.backend.app.database import get_session
-from apps.backend.app.models import User
+from apps.backend.app.models.user import User
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

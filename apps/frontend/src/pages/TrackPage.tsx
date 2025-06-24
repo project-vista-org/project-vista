@@ -7,13 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import UserMenu from "@/components/UserMenu";
+import { supabase } from "@/lib/supabase";
+import { User } from "@supabase/supabase-js";
 
 const TrackPage = () => {
   const { trackId } = useParams<{ trackId: string }>();
   const [track, setTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    // Get current user
+    const getCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getCurrentUser();
+
     // This is a mock. Replace with actual data fetching.
     const savedTracks = localStorage.getItem("projectvista_tracks");
     if (savedTracks) {
@@ -56,7 +69,10 @@ const TrackPage = () => {
                 ProjectVista
               </Link>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-4">
+              <UserMenu user={user} />
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>

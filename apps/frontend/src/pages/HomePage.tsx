@@ -6,6 +6,7 @@ import { Track } from "@/types";
 import TrackCard from "@/components/TrackCard";
 import CreateTrackModal from "@/components/CreateTrackModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import UserMenu from "@/components/UserMenu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase, signOut } from "@/lib/supabase";
 
@@ -99,15 +100,7 @@ const HomePage = () => {
 
             <div className="flex items-center gap-4">
               <ThemeToggle />
-              <span className="text-sm text-muted-foreground dark:text-gray-300 hidden sm:block">
-                Welcome, {user?.user_metadata?.full_name || user?.email}
-              </span>
-              <button
-                onClick={handleSignOut}
-                className="text-sm text-muted-foreground hover:text-foreground dark:text-gray-300 dark:hover:text-gray-50 transition-colors"
-              >
-                Sign Out
-              </button>
+              <UserMenu user={user} />
             </div>
           </div>
         </div>
