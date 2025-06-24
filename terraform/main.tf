@@ -9,18 +9,18 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "vista-vpc"
+    Name = "${var.project_name}-vpc"
   }
 }
 
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "eu-north-1b"
+  availability_zone       = "${var.aws_region}a"
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "vista-public-subnet"
+    Name = "${var.project_name}-public-subnet"
   }
 }
 
@@ -28,7 +28,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "vista-igw"
+    Name = "${var.project_name}-igw"
   }
 }
 
@@ -41,7 +41,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "vista-public-rt"
+    Name = "${var.project_name}-public-rt"
   }
 }
 
@@ -52,7 +52,7 @@ resource "aws_route_table_association" "public" {
 
 # Security group
 resource "aws_security_group" "web" {
-  name        = "vista-web-sg"
+  name        = "${var.project_name}-web-sg"
   description = "Allow web and SSH traffic"
   vpc_id      = aws_vpc.main.id
 
@@ -85,20 +85,31 @@ resource "aws_security_group" "web" {
   }
 
   tags = {
-    Name = "vista-web-sg"
+    Name = "${var.project_name}-web-sg"
   }
 }
 
-# EC2 instance
+# EC2 instance - using t2.micro which is free tier eligible
 resource "aws_instance" "web" {
-  ami                    = "ami-0989fb15ce71ba39e" # Amazon Linux 2 AMI for eu-north-1
-  instance_type          = var.instance_type
+  # Use region-specific free tier AMIs
+  ami = {
+    "us-east-1" = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI for us-east-1
+    "eu-north-1" = "ami-0989fb15ce71ba39e" # Amazon Linux 2 AMI for eu-north-1
+  }[var.aws_region]
+
+  instance_type          = "t2.micro" # Forcing t2.micro for free tier eligibility
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.web.id]
   key_name               = var.key_name
 
+  # Free tier eligible EBS volume
+  root_block_device {
+    volume_size = 8 # 8 GB is within free tier
+    volume_type = "gp2"
+  }
+
   tags = {
-    Name = "vista-backend"
+    Name = "${var.project_name}-backend"
   }
 
   user_data = <<-EOF

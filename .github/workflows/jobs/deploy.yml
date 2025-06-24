@@ -1,0 +1,141 @@
+name: Deploy to EC2
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: string
+        default: "dev"
+      aws_region:
+        description: 'AWS region to deploy to'
+        required: true
+        type: string
+        default: "eu-north-1"
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        type: string
+      instance_ip:
+        description: 'EC2 instance IP address'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ inputs.aws_region }}
+      ENVIRONMENT: ${{ inputs.environment }}
+      SECRETS_PREFIX: "/${{ inputs.environment }}/backend"
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      INSTANCE_IP: ${{ inputs.instance_ip }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Get secrets from AWS Secrets Manager
+        id: secrets
+        run: |
+          # Fetch database URL
+          DATABASE_URL_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/DATABASE_URL" --query SecretString --output text || echo "")
+          if [ -z "$DATABASE_URL_SECRET" ]; then
+            echo "Using DATABASE_URL from GitHub secrets as fallback"
+            DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          else
+            echo "Using DATABASE_URL from AWS Secrets Manager"
+            DATABASE_URL="$DATABASE_URL_SECRET"
+          fi
+
+          # Fetch Supabase URL
+          SUPABASE_URL_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/SUPABASE_URL" --query SecretString --output text || echo "")
+          if [ -z "$SUPABASE_URL_SECRET" ]; then
+            echo "Using SUPABASE_URL from GitHub secrets as fallback"
+            SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
+          else
+            echo "Using SUPABASE_URL from AWS Secrets Manager"
+            SUPABASE_URL="$SUPABASE_URL_SECRET"
+          fi
+
+          # Fetch Supabase service role key
+          SUPABASE_KEY_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/SUPABASE_SERVICE_ROLE_KEY" --query SecretString --output text || echo "")
+          if [ -z "$SUPABASE_KEY_SECRET" ]; then
+            echo "Using SUPABASE_SERVICE_ROLE_KEY from GitHub secrets as fallback"
+            SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          else
+            echo "Using SUPABASE_SERVICE_ROLE_KEY from AWS Secrets Manager"
+            SUPABASE_KEY="$SUPABASE_KEY_SECRET"
+          fi
+
+          # Store secrets securely in environment variables
+          echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
+          echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
+          echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.INSTANCE_IP }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Install AWS CLI if not already installed
+            if ! command -v aws &> /dev/null; then
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip awscliv2.zip
+              sudo ./aws/install
+            fi
+
+            # Configure AWS credentials
+            mkdir -p ~/.aws
+            cat > ~/.aws/credentials << EOL
+            [default]
+            aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            EOL
+
+            cat > ~/.aws/config << EOL
+            [default]
+            region=${{ env.AWS_REGION }}
+            EOL
+
+            # Login to ECR
+            aws ecr get-login-password | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+
+            mkdir -p ~/vista-app
+            cd ~/vista-app
+
+            # Create docker-compose.yml
+            cat > docker-compose.yml << 'EOL'
+            version: '3'
+            services:
+              backend:
+                image: ${{ steps.login-ecr.outputs.registry }}/vista-backend-${{ env.ENVIRONMENT }}:${{ env.IMAGE_TAG }}
+                ports:
+                  - "80:8000"
+                restart: always
+                environment:
+                  - DATABASE_URL=${{ env.DATABASE_URL }}
+                  - SUPABASE_URL=${{ env.SUPABASE_URL }}
+                  - SUPABASE_SERVICE_ROLE_KEY=${{ env.SUPABASE_KEY }}
+                  - ENVIRONMENT=${{ env.ENVIRONMENT }}
+            EOL
+
+            # Pull and start containers
+            docker-compose pull
+            docker-compose down || true
+            docker-compose up -d

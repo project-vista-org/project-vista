@@ -7,6 +7,7 @@ on:
       - 'apps/backend/**'
       - 'terraform/**'
       - '.github/workflows/deploy-backend.yml'
+      - '.github/workflows/jobs/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -44,234 +45,36 @@ permissions:
   contents: read
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    env:
-      AWS_REGION: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-      SECRETS_PREFIX: "/${{ github.event.inputs.environment || 'dev' }}/backend"
-    outputs:
-      image_tag: ${{ steps.build_push.outputs.image_tag }}
+  test:
+    uses: ./.github/workflows/jobs/test.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+    secrets: inherit
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          cd apps/backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest
-
-      - name: Run tests
-        run: |
-          cd apps/backend
-          pytest -xvs || echo "No tests found or tests failed, but continuing workflow"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-          mask-aws-account-id: true
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build, tag, and push image to Amazon ECR
-        id: build_push
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: vista-backend-${{ env.ENVIRONMENT }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          # Create the repository if it doesn't exist
-          aws ecr describe-repositories --repository-names ${ECR_REPOSITORY} || aws ecr create-repository --repository-name ${ECR_REPOSITORY}
-
-          # Build and push
-          cd apps/backend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-          # Save the image tag for later use
-          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "image_uri=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+  build:
+    needs: test
+    uses: ./.github/workflows/jobs/build.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+    secrets: inherit
 
   terraform:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    env:
-      AWS_REGION: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-      INSTANCE_TYPE: ${{ github.event.inputs.instance_type || 't2.micro' }}
-    outputs:
-      instance_ip: ${{ steps.terraform_output.outputs.instance_ip }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-          mask-aws-account-id: true
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Terraform Init
-        run: |
-          cd terraform
-          terraform init
-
-      - name: Terraform Plan
-        run: |
-          cd terraform
-          terraform plan \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="instance_type=${{ env.INSTANCE_TYPE }}" \
-            -var="project_name=vista-${{ env.ENVIRONMENT }}"
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-        run: |
-          cd terraform
-          terraform apply -auto-approve \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="instance_type=${{ env.INSTANCE_TYPE }}" \
-            -var="project_name=vista-${{ env.ENVIRONMENT }}"
-
-      - name: Save Terraform Output
-        id: terraform_output
-        run: |
-          cd terraform
-          echo "instance_ip=$(terraform output -raw instance_ip)" >> $GITHUB_OUTPUT
+    needs: build
+    uses: ./.github/workflows/jobs/terraform.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+      instance_type: ${{ github.event.inputs.instance_type || 't2.micro' }}
+    secrets: inherit
 
   deploy:
-    needs: [build-and-test, terraform]
-    runs-on: ubuntu-latest
-    env:
-      AWS_REGION: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
-      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-      SECRETS_PREFIX: "/${{ github.event.inputs.environment || 'dev' }}/backend"
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-          mask-aws-account-id: true
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Get secrets from AWS Secrets Manager
-        id: secrets
-        run: |
-          # Fetch database URL
-          DATABASE_URL_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/DATABASE_URL" --query SecretString --output text || echo "")
-          if [ -z "$DATABASE_URL_SECRET" ]; then
-            echo "Using DATABASE_URL from GitHub secrets as fallback"
-            DATABASE_URL="${{ secrets.DATABASE_URL }}"
-          else
-            echo "Using DATABASE_URL from AWS Secrets Manager"
-            DATABASE_URL="$DATABASE_URL_SECRET"
-          fi
-
-          # Fetch Supabase URL
-          SUPABASE_URL_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/SUPABASE_URL" --query SecretString --output text || echo "")
-          if [ -z "$SUPABASE_URL_SECRET" ]; then
-            echo "Using SUPABASE_URL from GitHub secrets as fallback"
-            SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
-          else
-            echo "Using SUPABASE_URL from AWS Secrets Manager"
-            SUPABASE_URL="$SUPABASE_URL_SECRET"
-          fi
-
-          # Fetch Supabase service role key
-          SUPABASE_KEY_SECRET=$(aws secretsmanager get-secret-value --secret-id "${{ env.SECRETS_PREFIX }}/SUPABASE_SERVICE_ROLE_KEY" --query SecretString --output text || echo "")
-          if [ -z "$SUPABASE_KEY_SECRET" ]; then
-            echo "Using SUPABASE_SERVICE_ROLE_KEY from GitHub secrets as fallback"
-            SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
-          else
-            echo "Using SUPABASE_SERVICE_ROLE_KEY from AWS Secrets Manager"
-            SUPABASE_KEY="$SUPABASE_KEY_SECRET"
-          fi
-
-          # Store secrets securely in environment variables
-          echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
-          echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
-          echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
-
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ needs.terraform.outputs.instance_ip }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # Install AWS CLI if not already installed
-            if ! command -v aws &> /dev/null; then
-              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-              unzip awscliv2.zip
-              sudo ./aws/install
-            fi
-
-            # Configure AWS credentials
-            mkdir -p ~/.aws
-            cat > ~/.aws/credentials << EOL
-            [default]
-            aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            EOL
-
-            cat > ~/.aws/config << EOL
-            [default]
-            region=${{ env.AWS_REGION }}
-            EOL
-
-            # Login to ECR
-            aws ecr get-login-password | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-
-            mkdir -p ~/vista-app
-            cd ~/vista-app
-
-            # Create docker-compose.yml
-            cat > docker-compose.yml << 'EOL'
-            version: '3'
-            services:
-              backend:
-                image: ${{ steps.login-ecr.outputs.registry }}/vista-backend-${{ env.ENVIRONMENT }}:${{ needs.build-and-test.outputs.image_tag }}
-                ports:
-                  - "80:8000"
-                restart: always
-                environment:
-                  - DATABASE_URL=${{ env.DATABASE_URL }}
-                  - SUPABASE_URL=${{ env.SUPABASE_URL }}
-                  - SUPABASE_SERVICE_ROLE_KEY=${{ env.SUPABASE_KEY }}
-                  - ENVIRONMENT=${{ env.ENVIRONMENT }}
-            EOL
-
-            # Pull and start containers
-            docker-compose pull
-            docker-compose down || true
-            docker-compose up -d
+    needs: [build, terraform]
+    uses: ./.github/workflows/jobs/deploy.yml
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
+      image_tag: ${{ needs.build.outputs.image_tag }}
+      instance_ip: ${{ needs.terraform.outputs.instance_ip }}
+    secrets: inherit
