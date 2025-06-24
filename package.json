@@ -1,5 +1,5 @@
 {
-  "name": "the-vista-project-monorepo",
+  "name": "project-vista",
   "version": "1.0.0",
   "private": true,
   "workspaces": [

@@ -115,8 +115,8 @@ jobs:
             # Login to ECR
             aws ecr get-login-password | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
 
-            mkdir -p ~/vista-app
-            cd ~/vista-app
+            mkdir -p ~/project-vista-app
+            cd ~/project-vista-app
 
             # Create docker-compose.yml
             cat > docker-compose.yml << 'EOL'

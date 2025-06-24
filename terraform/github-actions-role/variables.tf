@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Name of the project for resource tagging"
   type        = string
-  default     = "vista"
+  default     = "project-vista"
 }
 
 variable "environment" {
@@ -25,5 +25,5 @@ variable "github_owner" {
 variable "github_repo" {
   description = "GitHub repository name"
   type        = string
-  default     = "the-vista-project" # Replace with your repository name
+  default     = "project-vista" # Replace with your repository name
 }

@@ -13,13 +13,13 @@ variable "instance_type" {
 variable "key_name" {
   description = "Name of the SSH key pair"
   type        = string
-  default     = "vista-key"
+  default     = "project-vista-prod-keypair"
 }
 
 variable "project_name" {
   description = "Name of the project for resource tagging"
   type        = string
-  default     = "vista"
+  default     = "project-vista"
 }
 
 variable "environment" {
