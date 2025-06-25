@@ -28,7 +28,7 @@ jobs:
     env:
       AWS_REGION: ${{ inputs.aws_region }}
       ENVIRONMENT: ${{ inputs.environment }}
-      SECRETS_PREFIX: "/${{ inputs.environment }}/backend"
+      SECRETS_PREFIX: "${{ inputs.environment }}/backend"
     outputs:
       image_tag: ${{ steps.build_push.outputs.image_tag }}
 
