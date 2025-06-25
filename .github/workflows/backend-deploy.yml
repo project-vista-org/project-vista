@@ -35,6 +35,7 @@ jobs:
       SECRETS_PREFIX: "/${{ inputs.environment }}/backend"
       IMAGE_TAG: ${{ inputs.image_tag }}
       INSTANCE_IP: ${{ inputs.instance_ip }}
+      INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
 
     steps:
       - name: Checkout code
@@ -89,52 +90,82 @@ jobs:
           echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
           echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
 
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ env.INSTANCE_IP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # Install AWS CLI if not already installed
-            if ! command -v aws &> /dev/null; then
-              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-              unzip awscliv2.zip
-              sudo ./aws/install
-            fi
+      - name: Create deployment files
+        id: create-files
+        run: |
+          # Create a temporary directory for deployment files
+          DEPLOY_DIR=$(mktemp -d)
+          echo "deploy_dir=$DEPLOY_DIR" >> $GITHUB_OUTPUT
 
-            # Configure AWS credentials using web identity token
-            mkdir -p ~/.aws
-            cat > ~/.aws/config << EOL
-            [default]
-            region=${{ env.AWS_REGION }}
-            role_arn=${{ vars.AWS_ROLE_TO_ASSUME }}
-            web_identity_token_file=/tmp/web_identity_token
-            EOL
+          # Create docker-compose.yml
+          cat > $DEPLOY_DIR/docker-compose.yml << EOL
+          version: '3'
+          services:
+            backend:
+              image: ${{ steps.login-ecr.outputs.registry }}/vista-backend-${{ env.ENVIRONMENT }}:${{ env.IMAGE_TAG }}
+              ports:
+                - "80:8000"
+              restart: always
+              environment:
+                - DATABASE_URL=${{ env.DATABASE_URL }}
+                - SUPABASE_URL=${{ env.SUPABASE_URL }}
+                - SUPABASE_SERVICE_ROLE_KEY=${{ env.SUPABASE_KEY }}
+                - ENVIRONMENT=${{ env.ENVIRONMENT }}
+          EOL
 
-            # Login to ECR
-            aws ecr get-login-password | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+          # Create deployment script
+          cat > $DEPLOY_DIR/deploy.sh << 'EOL'
+          #!/bin/bash
+          set -e
 
-            mkdir -p ~/project-vista-app
-            cd ~/project-vista-app
+          # Login to ECR
+          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
 
-            # Create docker-compose.yml
-            cat > docker-compose.yml << 'EOL'
-            version: '3'
-            services:
-              backend:
-                image: ${{ steps.login-ecr.outputs.registry }}/vista-backend-${{ env.ENVIRONMENT }}:${{ env.IMAGE_TAG }}
-                ports:
-                  - "80:8000"
-                restart: always
-                environment:
-                  - DATABASE_URL=${{ env.DATABASE_URL }}
-                  - SUPABASE_URL=${{ env.SUPABASE_URL }}
-                  - SUPABASE_SERVICE_ROLE_KEY=${{ env.SUPABASE_KEY }}
-                  - ENVIRONMENT=${{ env.ENVIRONMENT }}
-            EOL
+          mkdir -p ~/project-vista-app
+          cd ~/project-vista-app
 
-            # Pull and start containers
-            docker-compose pull
-            docker-compose down || true
-            docker-compose up -d
+          # Copy docker-compose file
+          cp /tmp/ssm-deployment/docker-compose.yml ./docker-compose.yml
+
+          # Pull and start containers
+          docker-compose pull
+          docker-compose down || true
+          docker-compose up -d
+
+          echo "Deployment completed successfully"
+          EOL
+
+          chmod +x $DEPLOY_DIR/deploy.sh
+
+      - name: Deploy to EC2 using SSM
+        run: |
+          # Upload deployment files to S3
+          BUCKET_NAME="vista-deployment-${RANDOM}"
+          aws s3api create-bucket --bucket $BUCKET_NAME \
+            --create-bucket-configuration LocationConstraint=${{ env.AWS_REGION }} \
+            --region ${{ env.AWS_REGION }} || true
+
+          aws s3 cp ${{ steps.create-files.outputs.deploy_dir }}/docker-compose.yml s3://$BUCKET_NAME/docker-compose.yml
+          aws s3 cp ${{ steps.create-files.outputs.deploy_dir }}/deploy.sh s3://$BUCKET_NAME/deploy.sh
+
+          # Create and run SSM document for deployment
+          aws ssm send-command \
+            --instance-ids "${{ env.INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters commands="[ \
+              \"mkdir -p /tmp/ssm-deployment\", \
+              \"aws s3 cp s3://$BUCKET_NAME/docker-compose.yml /tmp/ssm-deployment/docker-compose.yml\", \
+              \"aws s3 cp s3://$BUCKET_NAME/deploy.sh /tmp/ssm-deployment/deploy.sh\", \
+              \"chmod +x /tmp/ssm-deployment/deploy.sh\", \
+              \"ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }} AWS_REGION=${{ env.AWS_REGION }} /tmp/ssm-deployment/deploy.sh\" \
+            ]" \
+            --output text \
+            --cloud-watch-output-config CloudWatchOutputEnabled=true \
+            --region ${{ env.AWS_REGION }}
+
+          # Wait for command to complete (up to 5 minutes)
+          echo "Waiting for deployment to complete..."
+          sleep 30
+
+          # Clean up S3 bucket
+          aws s3 rm s3://$BUCKET_NAME --recursive || true
