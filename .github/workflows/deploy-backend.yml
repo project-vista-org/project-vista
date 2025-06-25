@@ -83,12 +83,11 @@ jobs:
     secrets: inherit
 
   deploy:
-    # needs: [build, terraform]
     needs: build
     uses: ./.github/workflows/backend-deploy.yml
     with:
       environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'prod' || github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
       image_tag: ${{ needs.build.outputs.image_tag }}
-      instance_ip: ${{ needs.terraform.outputs.instance_ip }}
+      instance_ip: ${{ vars.EC2_INSTANCE_IP }}
     secrets: inherit
