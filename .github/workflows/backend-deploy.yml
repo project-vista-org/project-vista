@@ -92,8 +92,12 @@ jobs:
 
       - name: Deploy to EC2 using SSM
         run: |
-          # Create docker-compose content as a variable
-          DOCKER_COMPOSE_CONTENT=$(cat << EOF
+          # Use a simpler approach with multiple SSM commands
+          INSTANCE_ID="${{ env.INSTANCE_ID }}"
+          REGION="${{ env.AWS_REGION }}"
+
+          # Create the docker-compose content
+          DOCKER_COMPOSE=$(cat << EOF
           version: '3'
           services:
             backend:
@@ -109,61 +113,48 @@ jobs:
           EOF
           )
 
-          # Escape the content for JSON
-          DOCKER_COMPOSE_CONTENT_ESCAPED=$(echo "$DOCKER_COMPOSE_CONTENT" | jq -Rs .)
-
-          # Create the deployment script as a variable
-          DEPLOY_SCRIPT=$(cat << 'EOF'
-          #!/bin/bash
-          set -e
-
-          # Login to ECR
-          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-
-          mkdir -p ~/project-vista-app
-          cd ~/project-vista-app
-
-          # Create docker-compose.yml file
-          echo "${DOCKER_COMPOSE_CONTENT}" > docker-compose.yml
-
-          # Pull and start containers
-          docker-compose pull
-          docker-compose down || true
-          docker-compose up -d
-
-          echo "Deployment completed successfully"
-          EOF
-          )
-
-          # Escape the script for JSON
-          DEPLOY_SCRIPT_ESCAPED=$(echo "$DEPLOY_SCRIPT" | jq -Rs .)
-
-          # Create the SSM document parameters
-          SSM_PARAMS=$(cat << EOF
-          {
-            "commands": [
-              "mkdir -p ~/project-vista-app",
-              "cd ~/project-vista-app",
-              "cat > docker-compose.yml << 'EOL'\n${DOCKER_COMPOSE_CONTENT}\nEOL",
-              "export AWS_REGION=${{ env.AWS_REGION }}",
-              "export ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}",
-              "aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}",
-              "docker-compose pull",
-              "docker-compose down || true",
-              "docker-compose up -d",
-              "echo 'Deployment completed successfully'"
-            ]
-          }
-          EOF
-          )
-
-          # Run the SSM command
+          # Step 1: Create directory
+          echo "Creating project directory..."
           aws ssm send-command \
-            --instance-ids "${{ env.INSTANCE_ID }}" \
+            --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters "$SSM_PARAMS" \
+            --parameters '{"commands":["mkdir -p ~/project-vista-app"]}' \
+            --output text \
+            --region "$REGION"
+
+          # Step 2: Create docker-compose file (properly escaped)
+          echo "Creating docker-compose.yml on instance..."
+          # Escape the docker-compose content for JSON
+          DOCKER_COMPOSE_ESCAPED=$(echo "$DOCKER_COMPOSE" | jq -Rs .)
+          # Remove the outer quotes that jq adds
+          DOCKER_COMPOSE_ESCAPED="${DOCKER_COMPOSE_ESCAPED:1:-1}"
+
+          aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "{\"commands\":[\"echo '$DOCKER_COMPOSE_ESCAPED' > ~/project-vista-app/docker-compose.yml\"]}" \
+            --output text \
+            --region "$REGION"
+
+          # Step 3: Run deployment commands
+          echo "Running deployment..."
+          aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters '{
+              "commands":[
+                "cd ~/project-vista-app",
+                "export AWS_REGION='${{ env.AWS_REGION }}'",
+                "export ECR_REGISTRY='${{ steps.login-ecr.outputs.registry }}'",
+                "aws ecr get-login-password --region '${{ env.AWS_REGION }}' | docker login --username AWS --password-stdin '${{ steps.login-ecr.outputs.registry }}'",
+                "docker-compose pull",
+                "docker-compose down || true",
+                "docker-compose up -d",
+                "echo \"Deployment completed successfully\""
+              ]
+            }' \
             --output text \
             --cloud-watch-output-config CloudWatchOutputEnabled=true \
-            --region ${{ env.AWS_REGION }}
+            --region "$REGION"
 
-          echo "Deployment command sent to instance ${{ env.INSTANCE_ID }}"
+          echo "Deployment commands sent to instance $INSTANCE_ID"
