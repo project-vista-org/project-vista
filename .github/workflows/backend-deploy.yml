@@ -35,7 +35,6 @@ jobs:
       SECRETS_PREFIX: "/${{ inputs.environment }}/backend"
       IMAGE_TAG: ${{ inputs.image_tag }}
       INSTANCE_IP: ${{ inputs.instance_ip }}
-      INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
 
     steps:
       - name: Checkout code
@@ -90,10 +89,30 @@ jobs:
           echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
           echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
 
+      - name: Validate instance ID
+        id: validate-instance
+        run: |
+          INSTANCE_ID="${{ vars.EC2_INSTANCE_ID }}"
+
+          # Validate instance ID
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "::error::EC2_INSTANCE_ID is not set in GitHub variables. Please add this variable with a valid EC2 instance ID."
+            exit 1
+          fi
+
+          # Check if instance ID is in the correct format (i-xxxxxxxxxxxxxxxxx)
+          if [[ ! "$INSTANCE_ID" =~ ^i-[a-zA-Z0-9]{8,17}$ ]]; then
+            echo "::error::Invalid EC2 instance ID format: $INSTANCE_ID. Expected format: i-xxxxxxxxxxxxxxxxx"
+            exit 1
+          fi
+
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "Using EC2 instance: $INSTANCE_ID"
+
       - name: Deploy to EC2 using SSM
         run: |
           # Use a simpler approach with multiple SSM commands
-          INSTANCE_ID="${{ env.INSTANCE_ID }}"
+          INSTANCE_ID="${{ steps.validate-instance.outputs.instance_id }}"
           REGION="${{ env.AWS_REGION }}"
 
           # Create the docker-compose content
