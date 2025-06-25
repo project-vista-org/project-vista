@@ -78,7 +78,7 @@ jobs:
     # needs: terraform
     uses: ./.github/workflows/backend-build.yml
     with:
-      environment: ${{ github.event.inputs.environment || 'dev' }}
+      environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'prod' || github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
     secrets: inherit
 
@@ -87,7 +87,7 @@ jobs:
     needs: build
     uses: ./.github/workflows/backend-deploy.yml
     with:
-      environment: ${{ github.event.inputs.environment || 'dev' }}
+      environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'prod' || github.event.inputs.environment || 'dev' }}
       aws_region: ${{ github.event.inputs.aws_region || 'eu-north-1' }}
       image_tag: ${{ needs.build.outputs.image_tag }}
       instance_ip: ${{ needs.terraform.outputs.instance_ip }}
