@@ -1,3 +1,13 @@
+terraform {
+  backend "s3" {
+    bucket         = "project-vista-terraform-state"
+    key            = "terraform/state/main-infra"
+    region         = "eu-north-1"
+    dynamodb_table = "project-vista-terraform-lock"
+    encrypt        = true
+  }
+}
+
 provider "aws" {
   region = var.aws_region
 }
@@ -152,32 +162,6 @@ resource "aws_instance" "web" {
               curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
               chmod +x /usr/local/bin/docker-compose
               EOF
-}
-
-# Budget alarm with unique name to prevent conflicts
-resource "aws_budgets_budget" "cost_budget" {
-  name              = "${local.resource_prefix}-cost-budget-${formatdate("YYYYMMDD", timestamp())}"
-  budget_type       = "COST"
-  limit_amount      = "1"  # Minimum allowed is $1
-  limit_unit        = "USD"
-  time_unit         = "MONTHLY"
-  time_period_start = formatdate("YYYY-MM-DD_hh:mm", timestamp())
-  time_period_end   = "2087-06-15_00:00"  # Far future date
-
-  notification {
-    comparison_operator        = "GREATER_THAN"
-    threshold                  = 0.01  # Notify at 1 cent (1% of $1)
-    threshold_type             = "PERCENTAGE"
-    notification_type          = "ACTUAL"
-    subscriber_email_addresses = [var.notification_email]
-  }
-
-  # Prevent recreation on each apply
-  lifecycle {
-    ignore_changes = [
-      time_period_start
-    ]
-  }
 }
 
 # Output the public IP

@@ -21,69 +21,49 @@ This directory contains Terraform code for provisioning AWS infrastructure for t
 
 ## Using Existing VPC and Subnet
 
-The infrastructure is configured to work with existing VPCs and subnets to avoid hitting AWS VPC limits and prevent unnecessary resource creation. You can:
+The infrastructure is configured to use existing VPC and subnet resources when available. This prevents creating unnecessary duplicate resources and hitting AWS service limits.
 
-1. **Use an existing VPC and subnet** - Provide the IDs in the GitHub Actions workflow inputs:
-   - `existing_vpc_id`: The ID of your existing VPC (e.g., vpc-0123456789abcdef0)
-   - `existing_subnet_id`: The ID of an existing public subnet (e.g., subnet-0123456789abcdef0)
+You can specify the VPC and subnet IDs in the GitHub Actions workflow inputs or directly in the Terraform variables.
 
-2. **Let Terraform find the default VPC** - Leave the VPC ID empty, and Terraform will attempt to use the default VPC
+## Terraform State Management
 
-3. **Find your VPCs** using the AWS CLI:
-   ```bash
-   aws ec2 describe-vpcs --region eu-north-1 --query 'Vpcs[*].{VpcId:VpcId,CidrBlock:CidrBlock,Name:Tags[?Key==`Name`].Value|[0],IsDefault:IsDefault}' --output table
-   ```
+The infrastructure uses remote state management with S3 and DynamoDB:
 
-4. **Find subnets** in a specific VPC:
-   ```bash
-   aws ec2 describe-subnets --region eu-north-1 --filters "Name=vpc-id,Values=vpc-YOUR_VPC_ID" --query 'Subnets[*].{SubnetId:SubnetId,CidrBlock:CidrBlock,AZ:AvailabilityZone,Public:MapPublicIpOnLaunch}' --output table
-   ```
+- **S3 Bucket**: `project-vista-terraform-state`
+  - Stores the Terraform state files
+  - Versioning enabled to track changes
+  - Encryption enabled for security
 
-## Resource Management
+- **DynamoDB Table**: `project-vista-terraform-lock`
+  - Provides state locking to prevent concurrent modifications
+  - Ensures consistency when multiple workflows run
 
-The infrastructure is designed to:
+The GitHub Actions workflow automatically creates these resources if they don't exist.
 
-1. **Reuse existing resources** when possible
-2. **Avoid recreation** of resources on subsequent deployments
-3. **Use unique names** for resources that can't be updated in-place
+## Resource Lifecycle Management
 
-This approach minimizes AWS costs and prevents hitting service limits.
+Resources are configured with appropriate lifecycle blocks to:
+
+1. Prevent unnecessary recreation of resources
+2. Handle existing resources gracefully
+3. Maintain consistent state between deployments
 
 ## Manual Deployment
 
-If you need to deploy the main infrastructure manually:
+If you need to deploy the infrastructure manually:
 
 ```bash
 cd main-infra
 terraform init
-terraform plan -var="environment=dev" -var="instance_type=t2.micro"
-terraform apply -var="environment=dev" -var="instance_type=t2.micro"
+terraform plan -var="environment=dev" -var="existing_vpc_id=vpc-12345" -var="existing_subnet_id=subnet-12345"
+terraform apply
 ```
 
-### Using an Existing VPC
+## Important Notes
 
-If you've hit the VPC limit in your AWS account, you can use an existing VPC instead of creating a new one:
-
-```bash
-cd main-infra
-terraform init
-terraform plan \
-  -var="environment=dev" \
-  -var="instance_type=t2.micro" \
-  -var="existing_vpc_id=vpc-12345678" \
-  -var="existing_subnet_id=subnet-12345678"
-terraform apply \
-  -var="environment=dev" \
-  -var="instance_type=t2.micro" \
-  -var="existing_vpc_id=vpc-12345678" \
-  -var="existing_subnet_id=subnet-12345678"
-```
-
-You can also leave `existing_subnet_id` empty to automatically select a public subnet from the VPC:
-
-```bash
-terraform apply -var="existing_vpc_id=vpc-12345678"
-```
+- The budget alarm is configured with a stable name to prevent recreation issues
+- Security groups use create_before_destroy to handle updates properly
+- EC2 instances are configured to ignore AMI updates to prevent unnecessary replacements
 
 ## Variables
 

@@ -144,6 +144,54 @@ resource "aws_iam_policy" "budget_policy" {
   })
 }
 
+# Policy for S3 and DynamoDB access for Terraform state
+resource "aws_iam_policy" "terraform_state_policy" {
+  name        = "${var.project_name}-terraform-state-policy"
+  description = "Policy for GitHub Actions to manage Terraform state in S3 and DynamoDB"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::project-vista-terraform-state",
+          "arn:aws:s3:::project-vista-terraform-state/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:CreateBucket",
+          "s3:PutBucketVersioning",
+          "s3:PutBucketEncryption",
+          "s3:GetBucketLocation",
+          "s3:ListAllMyBuckets",
+          "s3:HeadBucket"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:DescribeTable",
+          "dynamodb:CreateTable",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem"
+        ]
+        Resource = "arn:aws:dynamodb:*:*:table/project-vista-terraform-lock"
+      }
+    ]
+  })
+}
+
 # Attach policies to role
 resource "aws_iam_role_policy_attachment" "ecr_attachment" {
   role       = aws_iam_role.github_actions.name
@@ -163,6 +211,12 @@ resource "aws_iam_role_policy_attachment" "secrets_attachment" {
 resource "aws_iam_role_policy_attachment" "budget_attachment" {
   role       = aws_iam_role.github_actions.name
   policy_arn = aws_iam_policy.budget_policy.arn
+}
+
+# Attach the Terraform state policy to the role
+resource "aws_iam_role_policy_attachment" "terraform_state_policy_attachment" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.terraform_state_policy.arn
 }
 
 # Output the role ARN to use in GitHub Actions

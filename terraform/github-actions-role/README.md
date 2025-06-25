@@ -12,6 +12,8 @@ This module is separated from the main infrastructure because:
 
 ## Setup Instructions
 
+For detailed step-by-step instructions, see [Setup Instructions](./setup-instructions.md).
+
 ### Prerequisites
 
 - AWS CLI configured with admin access

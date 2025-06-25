@@ -19,13 +19,13 @@ variable "environment" {
 variable "github_owner" {
   description = "GitHub owner/organization name"
   type        = string
-  default     = "alonemanuel" # Replace with your GitHub username or organization
+  default     = "project-vista-org" # GitHub organization name
 }
 
 variable "github_repo" {
   description = "GitHub repository name"
   type        = string
-  default     = "project-vista" # Replace with your repository name
+  default     = "project-vista" # Repository name
 }
 
 variable "notification_email" {
