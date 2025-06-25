@@ -90,15 +90,10 @@ jobs:
           echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
           echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
 
-      - name: Create deployment files
-        id: create-files
+      - name: Deploy to EC2 using SSM
         run: |
-          # Create a temporary directory for deployment files
-          DEPLOY_DIR=$(mktemp -d)
-          echo "deploy_dir=$DEPLOY_DIR" >> $GITHUB_OUTPUT
-
-          # Create docker-compose.yml
-          cat > $DEPLOY_DIR/docker-compose.yml << EOL
+          # Create docker-compose content as a variable
+          DOCKER_COMPOSE_CONTENT=$(cat << EOF
           version: '3'
           services:
             backend:
@@ -111,10 +106,14 @@ jobs:
                 - SUPABASE_URL=${{ env.SUPABASE_URL }}
                 - SUPABASE_SERVICE_ROLE_KEY=${{ env.SUPABASE_KEY }}
                 - ENVIRONMENT=${{ env.ENVIRONMENT }}
-          EOL
+          EOF
+          )
 
-          # Create deployment script
-          cat > $DEPLOY_DIR/deploy.sh << 'EOL'
+          # Escape the content for JSON
+          DOCKER_COMPOSE_CONTENT_ESCAPED=$(echo "$DOCKER_COMPOSE_CONTENT" | jq -Rs .)
+
+          # Create the deployment script as a variable
+          DEPLOY_SCRIPT=$(cat << 'EOF'
           #!/bin/bash
           set -e
 
@@ -124,8 +123,8 @@ jobs:
           mkdir -p ~/project-vista-app
           cd ~/project-vista-app
 
-          # Copy docker-compose file
-          cp /tmp/ssm-deployment/docker-compose.yml ./docker-compose.yml
+          # Create docker-compose.yml file
+          echo "${DOCKER_COMPOSE_CONTENT}" > docker-compose.yml
 
           # Pull and start containers
           docker-compose pull
@@ -133,39 +132,38 @@ jobs:
           docker-compose up -d
 
           echo "Deployment completed successfully"
-          EOL
+          EOF
+          )
 
-          chmod +x $DEPLOY_DIR/deploy.sh
+          # Escape the script for JSON
+          DEPLOY_SCRIPT_ESCAPED=$(echo "$DEPLOY_SCRIPT" | jq -Rs .)
 
-      - name: Deploy to EC2 using SSM
-        run: |
-          # Upload deployment files to S3
-          BUCKET_NAME="vista-deployment-${RANDOM}"
-          aws s3api create-bucket --bucket $BUCKET_NAME \
-            --create-bucket-configuration LocationConstraint=${{ env.AWS_REGION }} \
-            --region ${{ env.AWS_REGION }} || true
+          # Create the SSM document parameters
+          SSM_PARAMS=$(cat << EOF
+          {
+            "commands": [
+              "mkdir -p ~/project-vista-app",
+              "cd ~/project-vista-app",
+              "cat > docker-compose.yml << 'EOL'\n${DOCKER_COMPOSE_CONTENT}\nEOL",
+              "export AWS_REGION=${{ env.AWS_REGION }}",
+              "export ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}",
+              "aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}",
+              "docker-compose pull",
+              "docker-compose down || true",
+              "docker-compose up -d",
+              "echo 'Deployment completed successfully'"
+            ]
+          }
+          EOF
+          )
 
-          aws s3 cp ${{ steps.create-files.outputs.deploy_dir }}/docker-compose.yml s3://$BUCKET_NAME/docker-compose.yml
-          aws s3 cp ${{ steps.create-files.outputs.deploy_dir }}/deploy.sh s3://$BUCKET_NAME/deploy.sh
-
-          # Create and run SSM document for deployment
+          # Run the SSM command
           aws ssm send-command \
             --instance-ids "${{ env.INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands="[ \
-              \"mkdir -p /tmp/ssm-deployment\", \
-              \"aws s3 cp s3://$BUCKET_NAME/docker-compose.yml /tmp/ssm-deployment/docker-compose.yml\", \
-              \"aws s3 cp s3://$BUCKET_NAME/deploy.sh /tmp/ssm-deployment/deploy.sh\", \
-              \"chmod +x /tmp/ssm-deployment/deploy.sh\", \
-              \"ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }} AWS_REGION=${{ env.AWS_REGION }} /tmp/ssm-deployment/deploy.sh\" \
-            ]" \
+            --parameters "$SSM_PARAMS" \
             --output text \
             --cloud-watch-output-config CloudWatchOutputEnabled=true \
             --region ${{ env.AWS_REGION }}
 
-          # Wait for command to complete (up to 5 minutes)
-          echo "Waiting for deployment to complete..."
-          sleep 30
-
-          # Clean up S3 bucket
-          aws s3 rm s3://$BUCKET_NAME --recursive || true
+          echo "Deployment command sent to instance ${{ env.INSTANCE_ID }}"
