@@ -33,7 +33,7 @@ async def create_track(
         title=track_data.title,
         description=track_data.description,
         user_id=current_user.id,
-        articles=track_data.articles,
+        articles=[article.model_dump() for article in track_data.articles],
     )
     session.add(track)
     session.commit()
@@ -85,7 +85,7 @@ async def update_track(
     if track_data.description is not None:
         track.description = track_data.description
     if track_data.articles is not None:
-        track.articles = track_data.articles
+        track.articles = [article.model_dump() for article in track_data.articles]
 
     track.updated_at = datetime.utcnow()
 

@@ -14,11 +14,12 @@ export interface WikipediaArticle {
 
 export interface Track {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
+  description?: string;
   articles: WikipediaArticle[];
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface WikipediaSearchResult {

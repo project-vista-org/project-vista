@@ -101,7 +101,7 @@ const TrackPage = () => {
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               <span>
-                Created on {new Date(track.createdAt).toLocaleDateString()}
+                Created on {new Date(track.created_at).toLocaleDateString()}
               </span>
             </div>
           </div>

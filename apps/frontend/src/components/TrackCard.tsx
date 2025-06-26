@@ -52,7 +52,7 @@ const TrackCard = ({ track, onClick }: TrackCardProps) => {
 
       <div className="mt-4 pt-4 border-t border-border/50 dark:border-gray-700/50">
         <p className="text-xs text-muted-foreground dark:text-gray-400">
-          Created {new Date(track.createdAt).toLocaleDateString()}
+          Created {new Date(track.created_at).toLocaleDateString()}
         </p>
       </div>
     </div>

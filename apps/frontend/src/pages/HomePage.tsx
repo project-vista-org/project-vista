@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase, signOut } from "@/lib/supabase";
+import { fetchTracks, createTrack } from "@/lib/api";
 
 const HomePage = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -19,44 +20,47 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get current user
-    const getCurrentUser = async () => {
+    // Get current user and load tracks
+    const loadUserAndTracks = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       setUser(user);
-    };
-    getCurrentUser();
 
-    // Load tracks from localStorage (will be replaced with Supabase)
-    const savedTracks = localStorage.getItem("projectvista_tracks");
-    if (savedTracks) {
-      setTracks(JSON.parse(savedTracks));
+      if (user) {
+        try {
+          const userTracks = await fetchTracks();
+          setTracks(userTracks);
+        } catch (error) {
+          console.error("Failed to load tracks:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load your tracks. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+    loadUserAndTracks();
+  }, [toast]);
+
+  const handleCreateTrack = async (title: string, articles: any[]) => {
+    try {
+      const newTrack = await createTrack(title, articles);
+      setTracks([...tracks, newTrack]);
+
+      toast({
+        title: "Track Created!",
+        description: `"${title}" has been added to your tracks.`,
+      });
+    } catch (error) {
+      console.error("Failed to create track:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create track. Please try again.",
+        variant: "destructive",
+      });
     }
-  }, []);
-
-  const saveTracksToStorage = (newTracks: Track[]) => {
-    localStorage.setItem("projectvista_tracks", JSON.stringify(newTracks));
-    setTracks(newTracks);
-  };
-
-  const handleCreateTrack = (title: string, articles: any[]) => {
-    const newTrack: Track = {
-      id: `track_${Date.now()}`,
-      userId: user?.id || "unknown",
-      title,
-      articles,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const updatedTracks = [...tracks, newTrack];
-    saveTracksToStorage(updatedTracks);
-
-    toast({
-      title: "Track Created!",
-      description: `"${title}" has been added to your tracks.`,
-    });
   };
 
   const handleTrackClick = (track: Track) => {
@@ -73,8 +77,7 @@ const HomePage = () => {
         variant: "destructive",
       });
     } else {
-      // Clear local storage
-      localStorage.removeItem("projectvista_tracks");
+      setTracks([]);
       toast({
         title: "Signed out",
         description: "You have been successfully signed out.",
