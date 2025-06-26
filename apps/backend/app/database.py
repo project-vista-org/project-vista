@@ -1,7 +1,9 @@
 import os
+from typing import AsyncGenerator
 
 from dotenv import load_dotenv
-from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlmodel import SQLModel
 
 # Load environment variables from .env file
 load_dotenv()
@@ -18,21 +20,27 @@ RDS_USERNAME = os.getenv("RDS_USERNAME")
 # Fallback to traditional DATABASE_URL if AWS credentials are not provided
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Use DATABASE_URL if available (simplest approach)
+# Convert postgres:// to postgresql+asyncpg:// for async support
 if DATABASE_URL:
-    # Create engine with traditional password authentication
-    engine = create_engine(DATABASE_URL, echo=True)
-    print("Using traditional password authentication for database connection")
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    # Create async engine
+    engine = create_async_engine(DATABASE_URL, echo=True)
+    print("Using async database connection with asyncpg")
 else:
     raise ValueError("No DATABASE_URL found. Please set DATABASE_URL in your .env file")
 
 
-def create_db_and_tables():
+async def create_db_and_tables():
     """Create database tables from SQLModel models"""
-    SQLModel.metadata.create_all(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
 
 
-def get_session():
-    """Get a database session"""
-    with Session(engine) as session:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """Get an async database session"""
+    async with AsyncSession(engine) as session:
         yield session

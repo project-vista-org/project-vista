@@ -6,7 +6,8 @@ from apps.backend.app.database import get_session
 from apps.backend.app.models.track import Track, TrackCreate, TrackResponse, TrackUpdate
 from apps.backend.app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 router = APIRouter(prefix="/api/tracks", tags=["tracks"])
 
@@ -14,11 +15,12 @@ router = APIRouter(prefix="/api/tracks", tags=["tracks"])
 @router.get("/", response_model=List[TrackResponse])
 async def get_tracks(
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     """Get all tracks for the authenticated user"""
     statement = select(Track).where(Track.user_id == current_user.id)
-    tracks = session.exec(statement).all()
+    result = await session.execute(statement)
+    tracks = result.scalars().all()
     return tracks
 
 
@@ -26,7 +28,7 @@ async def get_tracks(
 async def create_track(
     track_data: TrackCreate,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     """Create a new track for the authenticated user"""
     track = Track(
@@ -36,8 +38,8 @@ async def create_track(
         articles=[article.model_dump() for article in track_data.articles],
     )
     session.add(track)
-    session.commit()
-    session.refresh(track)
+    await session.commit()
+    await session.refresh(track)
     return track
 
 
@@ -45,13 +47,14 @@ async def create_track(
 async def get_track(
     track_id: str,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     """Get a specific track (must belong to the authenticated user)"""
     statement = select(Track).where(
         Track.id == track_id, Track.user_id == current_user.id
     )
-    track = session.exec(statement).first()
+    result = await session.execute(statement)
+    track = result.scalar_one_or_none()
 
     if not track:
         raise HTTPException(
@@ -66,13 +69,14 @@ async def update_track(
     track_id: str,
     track_data: TrackUpdate,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     """Update a track (must belong to the authenticated user)"""
     statement = select(Track).where(
         Track.id == track_id, Track.user_id == current_user.id
     )
-    track = session.exec(statement).first()
+    result = await session.execute(statement)
+    track = result.scalar_one_or_none()
 
     if not track:
         raise HTTPException(
@@ -90,8 +94,8 @@ async def update_track(
     track.updated_at = datetime.utcnow()
 
     session.add(track)
-    session.commit()
-    session.refresh(track)
+    await session.commit()
+    await session.refresh(track)
     return track
 
 
@@ -99,19 +103,20 @@ async def update_track(
 async def delete_track(
     track_id: str,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ):
     """Delete a track (must belong to the authenticated user)"""
     statement = select(Track).where(
         Track.id == track_id, Track.user_id == current_user.id
     )
-    track = session.exec(statement).first()
+    result = await session.execute(statement)
+    track = result.scalar_one_or_none()
 
     if not track:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Track not found"
         )
 
-    session.delete(track)
-    session.commit()
+    await session.delete(track)
+    await session.commit()
     return None

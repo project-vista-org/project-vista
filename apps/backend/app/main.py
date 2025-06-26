@@ -20,7 +20,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on startup"""
-    create_db_and_tables()
+    await create_db_and_tables()
 
 
 @app.get("/")

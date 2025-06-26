@@ -7,7 +7,8 @@ from apps.backend.app.models.user import User
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlmodel import Session, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 from supabase import Client, create_client
 
 # Load environment variables from .env file
@@ -24,11 +25,12 @@ supabase: Client = create_client(supabase_url, supabase_service_key)
 
 # Security bearer token scheme
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    session: Session = Depends(get_session),
+    session: AsyncSession = Depends(get_session),
 ) -> User:
     """
     Verify JWT token, upsert user into database, and return user data.
@@ -68,7 +70,8 @@ async def get_current_user(
 
         # Check if user exists in our database
         statement = select(User).where(User.id == user_id)
-        db_user = session.exec(statement).first()
+        result = await session.execute(statement)
+        db_user = result.scalar_one_or_none()
 
         if db_user:
             # Update existing user
@@ -77,14 +80,14 @@ async def get_current_user(
             db_user.avatar_url = avatar_url
             db_user.updated_at = datetime.utcnow()
             session.add(db_user)
-            session.commit()
-            session.refresh(db_user)
+            await session.commit()
+            await session.refresh(db_user)
         else:
             # Create new user
             db_user = User(id=user_id, email=email, name=name, avatar_url=avatar_url)
             session.add(db_user)
-            session.commit()
-            session.refresh(db_user)
+            await session.commit()
+            await session.refresh(db_user)
 
         return db_user
 
@@ -96,9 +99,9 @@ async def get_current_user(
         )
 
 
-def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    session: Session = Depends(get_session),
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+    session: AsyncSession = Depends(get_session),
 ) -> Optional[User]:
     """
     Similar to get_current_user but returns None instead of raising an exception
@@ -109,6 +112,6 @@ def get_optional_user(
         return None
 
     try:
-        return get_current_user(credentials, session)
+        return await get_current_user(credentials, session)
     except HTTPException:
         return None
