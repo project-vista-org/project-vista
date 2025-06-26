@@ -1,0 +1,247 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Backend Async-Only Guidelines
+
+This document establishes the mandatory use of async patterns throughout the backend codebase. All database operations, route handlers, and I/O operations MUST be async.
+
+## Core Principle: Async Everything
+
+The backend is built on FastAPI's async-first architecture. Every function that performs I/O operations (database, network, file system) MUST be async.
+
+---
+
+## 🔧 Database Operations
+
+### ✅ ALWAYS Use Async Sessions
+
+```python
+# CORRECT - Async session dependency
+from sqlalchemy.ext.asyncio import AsyncSession
+from apps.backend.app.database import get_session
+
+async def my_route(session: AsyncSession = Depends(get_session)):
+    # Use session.execute() for queries
+    result = await session.execute(statement)
+    data = result.scalar_one_or_none()  # or .scalars().all()
+
+    # Use await for commits and refreshes
+    await session.commit()
+    await session.refresh(obj)
+```
+
+### ❌ NEVER Use Sync Sessions
+
+```python
+# WRONG - Don't use sync Session
+from sqlmodel import Session
+
+def my_route(session: Session = Depends(get_session)):  # WRONG
+    result = session.exec(statement)  # WRONG
+    session.commit()  # WRONG
+```
+
+### Database Query Patterns
+
+**Single Results:**
+```python
+# CORRECT
+result = await session.execute(select(User).where(User.id == user_id))
+user = result.scalar_one_or_none()
+```
+
+**Multiple Results:**
+```python
+# CORRECT
+result = await session.execute(select(Track).where(Track.user_id == user_id))
+tracks = result.scalars().all()
+```
+
+**Commits and Refreshes:**
+```python
+# CORRECT
+session.add(new_object)
+await session.commit()
+await session.refresh(new_object)
+```
+
+---
+
+## 🛤️ Route Handlers
+
+### ✅ ALL Route Handlers Must Be Async
+
+```python
+# CORRECT - All route handlers are async
+@router.get("/users/{user_id}")
+async def get_user(
+    user_id: str,
+    session: AsyncSession = Depends(get_session)
+):
+    # Implementation
+    pass
+
+@router.post("/tracks")
+async def create_track(
+    track_data: TrackCreate,
+    session: AsyncSession = Depends(get_session)
+):
+    # Implementation
+    pass
+```
+
+### ❌ NEVER Create Sync Route Handlers
+
+```python
+# WRONG - Sync route handlers are forbidden
+@router.get("/users/{user_id}")
+def get_user(user_id: str):  # WRONG - Missing async
+    pass
+```
+
+---
+
+## 🔐 Authentication & Dependencies
+
+### ✅ Async Auth Functions
+
+```python
+# CORRECT - Auth functions are async
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    # Async implementation
+    result = await session.execute(statement)
+    return result.scalar_one_or_none()
+
+# For optional auth
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+    session: AsyncSession = Depends(get_session),
+) -> Optional[User]:
+    # Async implementation
+    pass
+```
+
+### Authentication Dependencies
+
+```python
+# CORRECT - Use proper HTTPBearer configurations
+security = HTTPBearer()  # For required auth
+optional_security = HTTPBearer(auto_error=False)  # For optional auth
+```
+
+---
+
+## 📚 Database Engine & Session Setup
+
+### ✅ Async Engine Configuration
+
+```python
+# CORRECT - Async engine setup
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+# Convert database URL for async support
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+
+engine = create_async_engine(DATABASE_URL, echo=True)
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSession(engine) as session:
+        yield session
+
+async def create_db_and_tables():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+```
+
+---
+
+## 🚫 Forbidden Patterns
+
+### ❌ Sync Database Operations
+
+```python
+# WRONG - These patterns are forbidden
+from sqlmodel import Session, create_engine
+
+engine = create_engine(DATABASE_URL)  # WRONG
+session.exec(statement)  # WRONG
+session.commit()  # WRONG
+session.refresh(obj)  # WRONG
+```
+
+### ❌ Mixing Sync and Async
+
+```python
+# WRONG - Don't mix sync and async patterns
+async def my_function():
+    # This is inconsistent and error-prone
+    sync_result = some_sync_function()  # WRONG
+    async_result = await some_async_function()  # OK
+```
+
+---
+
+## 📦 Required Dependencies
+
+Always ensure these dependencies are available:
+
+```txt
+asyncpg==0.30.0  # PostgreSQL async driver
+greenlet==3.1.1  # Required for SQLAlchemy async
+SQLAlchemy==2.0.41  # Async-capable version
+```
+
+---
+
+## 🧪 Testing Async Code
+
+When writing tests for async code:
+
+```python
+# CORRECT - Async test functions
+import pytest
+
+@pytest.mark.asyncio
+async def test_async_function():
+    # Test async functionality
+    result = await my_async_function()
+    assert result is not None
+```
+
+---
+
+## 🔄 Migration Guidelines
+
+When converting sync code to async:
+
+1. **Add `async` to function definitions**
+2. **Add `await` to all I/O operations**
+3. **Use `AsyncSession` instead of `Session`**
+4. **Use `session.execute()` instead of `session.exec()`**
+5. **Use proper result handling** (`.scalar_one_or_none()`, `.scalars().all()`)
+6. **Update all dependencies** to use async versions
+
+---
+
+## ⚡ Performance Benefits
+
+Following these async patterns provides:
+
+- **Non-blocking I/O**: Server can handle more concurrent requests
+- **Better resource utilization**: Threads aren't blocked waiting for database responses
+- **Improved scalability**: Natural alignment with FastAPI's async architecture
+- **Future-proof**: Ready for high-load production environments
+
+---
+
+## 🎯 Summary
+
+**Golden Rule**: If it touches the database, network, or file system, it MUST be async.
+
+Every new backend feature must follow these async patterns from the start. No exceptions.
