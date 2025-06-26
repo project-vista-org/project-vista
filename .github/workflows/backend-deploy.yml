@@ -154,8 +154,8 @@ jobs:
 
           # Step 2: Create docker-compose file using base64 encoding (safer than jq)
           echo "Creating docker-compose.yml on instance..."
-          # Encode the docker-compose content with base64 for safe transfer
-          ENCODED_CONTENT=$(echo "$DOCKER_COMPOSE" | base64)
+          # Encode the docker-compose content with base64 for safe transfer (single line, no wrapping)
+          ENCODED_CONTENT=$(echo "$DOCKER_COMPOSE" | base64 -w 0)
 
           aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
