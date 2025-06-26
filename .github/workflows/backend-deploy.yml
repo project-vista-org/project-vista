@@ -128,7 +128,7 @@ jobs:
 
           # Create the docker-compose content
           DOCKER_COMPOSE=$(cat << EOF
-          version: '3'
+          version: '3.8'
           services:
             backend:
               image: ${{ steps.login-ecr.outputs.registry }}/vista-backend-${{ env.ENVIRONMENT }}:${{ env.IMAGE_TAG }}
@@ -152,17 +152,15 @@ jobs:
             --output text \
             --region "$REGION"
 
-          # Step 2: Create docker-compose file (properly escaped)
+          # Step 2: Create docker-compose file using base64 encoding (safer than jq)
           echo "Creating docker-compose.yml on instance..."
-          # Escape the docker-compose content for JSON
-          DOCKER_COMPOSE_ESCAPED=$(echo "$DOCKER_COMPOSE" | jq -Rs .)
-          # Remove the outer quotes that jq adds
-          DOCKER_COMPOSE_ESCAPED="${DOCKER_COMPOSE_ESCAPED:1:-1}"
+          # Encode the docker-compose content with base64 for safe transfer
+          ENCODED_CONTENT=$(echo "$DOCKER_COMPOSE" | base64)
 
           aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters "{\"commands\":[\"echo '$DOCKER_COMPOSE_ESCAPED' > ~/project-vista-app/docker-compose.yml\"]}" \
+            --parameters "{\"commands\":[\"echo $ENCODED_CONTENT | base64 -d > ~/project-vista-app/docker-compose.yml\"]}" \
             --output text \
             --region "$REGION"
 
