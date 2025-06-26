@@ -1,4 +1,4 @@
-name: "Deploy Backend"
+name: "CICD"
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
     paths:
       - 'apps/backend/**'
       - 'terraform/**'
-      - '.github/workflows/deploy-backend.yml'
+      - '.github/workflows/cicd.yml'
       - '.github/workflows/backend-*.yml'
   workflow_dispatch:
     inputs:
