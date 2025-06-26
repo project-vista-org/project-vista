@@ -1,0 +1,47 @@
+from typing import List, Optional
+
+from apps.backend.app.models.track import Track
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
+
+
+class TracksRepository:
+    """Repository for Track database operations"""
+
+    @staticmethod
+    async def find_by_user_id(user_id: str, session: AsyncSession) -> List[Track]:
+        """Find all tracks for a specific user"""
+        statement = select(Track).where(Track.user_id == user_id)
+        result = await session.execute(statement)
+        return result.scalars().all()
+
+    @staticmethod
+    async def find_by_id_and_user_id(
+        track_id: str, user_id: str, session: AsyncSession
+    ) -> Optional[Track]:
+        """Find a track by ID that belongs to a specific user"""
+        statement = select(Track).where(Track.id == track_id, Track.user_id == user_id)
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def create(track: Track, session: AsyncSession) -> Track:
+        """Create a new track in the database"""
+        session.add(track)
+        await session.commit()
+        await session.refresh(track)
+        return track
+
+    @staticmethod
+    async def update(track: Track, session: AsyncSession) -> Track:
+        """Update an existing track in the database"""
+        session.add(track)
+        await session.commit()
+        await session.refresh(track)
+        return track
+
+    @staticmethod
+    async def delete(track: Track, session: AsyncSession) -> None:
+        """Delete a track from the database"""
+        await session.delete(track)
+        await session.commit()

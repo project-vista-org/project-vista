@@ -1,13 +1,13 @@
-from datetime import datetime
 from typing import List
 
 from apps.backend.app.auth import get_current_user
 from apps.backend.app.database import get_session
-from apps.backend.app.models.track import Track, TrackCreate, TrackResponse, TrackUpdate
+from apps.backend.app.models.track import TrackCreate, TrackResponse, TrackUpdate
 from apps.backend.app.models.user import User
+from apps.backend.app.repositories.tracks_repository import TracksRepository
+from apps.backend.app.services.tracks_service import TracksService
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
 
 router = APIRouter(prefix="/api/tracks", tags=["tracks"])
 
@@ -18,10 +18,9 @@ async def get_tracks(
     session: AsyncSession = Depends(get_session),
 ):
     """Get all tracks for the authenticated user"""
-    statement = select(Track).where(Track.user_id == current_user.id)
-    result = await session.execute(statement)
-    tracks = result.scalars().all()
-    return tracks
+    return await TracksRepository.find_by_user_id(
+        user_id=current_user.id, session=session
+    )
 
 
 @router.post("/", response_model=TrackResponse, status_code=status.HTTP_201_CREATED)
@@ -31,16 +30,9 @@ async def create_track(
     session: AsyncSession = Depends(get_session),
 ):
     """Create a new track for the authenticated user"""
-    track = Track(
-        title=track_data.title,
-        description=track_data.description,
-        user_id=current_user.id,
-        articles=[article.model_dump() for article in track_data.articles],
+    return await TracksService.create_track(
+        track_data=track_data, user_id=current_user.id, session=session
     )
-    session.add(track)
-    await session.commit()
-    await session.refresh(track)
-    return track
 
 
 @router.get("/{track_id}", response_model=TrackResponse)
@@ -50,11 +42,9 @@ async def get_track(
     session: AsyncSession = Depends(get_session),
 ):
     """Get a specific track (must belong to the authenticated user)"""
-    statement = select(Track).where(
-        Track.id == track_id, Track.user_id == current_user.id
+    track = await TracksRepository.find_by_id_and_user_id(
+        track_id=track_id, user_id=current_user.id, session=session
     )
-    result = await session.execute(statement)
-    track = result.scalar_one_or_none()
 
     if not track:
         raise HTTPException(
@@ -72,31 +62,12 @@ async def update_track(
     session: AsyncSession = Depends(get_session),
 ):
     """Update a track (must belong to the authenticated user)"""
-    statement = select(Track).where(
-        Track.id == track_id, Track.user_id == current_user.id
+    return await TracksService.update_track(
+        track_id=track_id,
+        track_data=track_data,
+        user_id=current_user.id,
+        session=session,
     )
-    result = await session.execute(statement)
-    track = result.scalar_one_or_none()
-
-    if not track:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Track not found"
-        )
-
-    # Update only provided fields
-    if track_data.title is not None:
-        track.title = track_data.title
-    if track_data.description is not None:
-        track.description = track_data.description
-    if track_data.articles is not None:
-        track.articles = [article.model_dump() for article in track_data.articles]
-
-    track.updated_at = datetime.utcnow()
-
-    session.add(track)
-    await session.commit()
-    await session.refresh(track)
-    return track
 
 
 @router.delete("/{track_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -106,17 +77,7 @@ async def delete_track(
     session: AsyncSession = Depends(get_session),
 ):
     """Delete a track (must belong to the authenticated user)"""
-    statement = select(Track).where(
-        Track.id == track_id, Track.user_id == current_user.id
+    await TracksService.delete_track(
+        track_id=track_id, user_id=current_user.id, session=session
     )
-    result = await session.execute(statement)
-    track = result.scalar_one_or_none()
-
-    if not track:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Track not found"
-        )
-
-    await session.delete(track)
-    await session.commit()
     return None
