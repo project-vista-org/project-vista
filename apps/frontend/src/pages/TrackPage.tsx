@@ -102,19 +102,27 @@ const TrackPage = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>; // Replace with a proper skeleton loader
+    return (
+      <div className="min-h-screen bg-background dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-foreground dark:text-gray-100">Loading...</div>
+      </div>
+    );
   }
 
   if (!track) {
     return (
-      <div className="text-center py-10">
-        <h2 className="text-2xl font-bold text-foreground">Track not found</h2>
-        <Link
-          to="/"
-          className="text-blue-500 hover:text-blue-600 hover:underline"
-        >
-          Go back to your tracks
-        </Link>
+      <div className="min-h-screen bg-background dark:bg-gray-900">
+        <div className="text-center py-10">
+          <h2 className="text-2xl font-bold text-foreground dark:text-gray-100">
+            Track not found
+          </h2>
+          <Link
+            to="/"
+            className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 hover:underline"
+          >
+            Go back to your tracks
+          </Link>
+        </div>
       </div>
     );
   }
@@ -123,13 +131,16 @@ const TrackPage = () => {
   const progress = (completedArticles / track.articles.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <header className="bg-background dark:bg-gray-900 border-b border-border dark:border-gray-700 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <Link to="/" className="text-2xl font-bold text-gray-800">
+              <Link
+                to="/"
+                className="text-2xl font-bold text-foreground dark:text-gray-100"
+              >
                 ProjectVista
               </Link>
             </div>
@@ -146,7 +157,7 @@ const TrackPage = () => {
         {/* Back Button */}
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-gray-200 mb-6 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           Back to all tracks
@@ -154,10 +165,10 @@ const TrackPage = () => {
 
         {/* Track Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-3">
+          <h1 className="text-4xl font-bold text-foreground dark:text-gray-100 mb-3">
             {track.title}
           </h1>
-          <div className="flex items-center gap-4 text-sm text-gray-500">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground dark:text-gray-400">
             <div className="flex items-center gap-2">
               <Book className="h-4 w-4" />
               <span>{track.articles.length} articles</span>
@@ -172,25 +183,25 @@ const TrackPage = () => {
         </div>
 
         {/* Progress */}
-        <Card className="mb-8 bg-white border border-gray-200 shadow rounded-lg">
+        <Card className="mb-8 bg-card dark:bg-gray-800 border border-border dark:border-gray-700 shadow rounded-lg">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-gray-800">
+            <CardTitle className="text-xl font-semibold text-foreground dark:text-gray-100">
               Your Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                 <div
-                  className="bg-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out"
+                  className="bg-blue-500 dark:bg-blue-400 h-2.5 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
-              <span className="font-medium text-gray-800 min-w-[3rem] text-right">
+              <span className="font-medium text-foreground dark:text-gray-100 min-w-[3rem] text-right">
                 {Math.round(progress)}%
               </span>
             </div>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-muted-foreground dark:text-gray-400 mt-2">
               {completedArticles} of {track.articles.length} articles completed.
             </p>
           </CardContent>
@@ -198,7 +209,7 @@ const TrackPage = () => {
 
         {/* Articles List */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+          <h2 className="text-2xl font-bold text-foreground dark:text-gray-100 mb-6">
             Track Articles
           </h2>
           <div className="space-y-3">
@@ -207,8 +218,8 @@ const TrackPage = () => {
                 key={index}
                 className={`relative p-6 rounded-lg border transition-all duration-200 ${
                   article.completed
-                    ? "bg-emerald-50 border-emerald-200 shadow-sm"
-                    : "bg-white border-gray-200 shadow hover:shadow-md hover:border-gray-300"
+                    ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 shadow-sm"
+                    : "bg-card dark:bg-gray-800 border-border dark:border-gray-700 shadow hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -217,8 +228,8 @@ const TrackPage = () => {
                       <div
                         className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                           article.completed
-                            ? "bg-emerald-500 text-white"
-                            : "bg-gray-100 text-gray-600"
+                            ? "bg-emerald-500 dark:bg-emerald-600 text-white"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                         }`}
                       >
                         {article.completed ? (
@@ -231,8 +242,8 @@ const TrackPage = () => {
                         <h3
                           className={`text-lg font-semibold truncate ${
                             article.completed
-                              ? "text-emerald-900"
-                              : "text-gray-900"
+                              ? "text-emerald-900 dark:text-emerald-100"
+                              : "text-foreground dark:text-gray-100"
                           }`}
                         >
                           {article.title}
@@ -240,8 +251,8 @@ const TrackPage = () => {
                         <p
                           className={`text-sm ${
                             article.completed
-                              ? "text-emerald-600"
-                              : "text-gray-500"
+                              ? "text-emerald-600 dark:text-emerald-300"
+                              : "text-muted-foreground dark:text-gray-400"
                           }`}
                         >
                           Article {index + 1} of {track.articles.length}
@@ -255,8 +266,8 @@ const TrackPage = () => {
                         rel="noopener noreferrer"
                         className={`inline-flex items-center gap-1 text-sm font-medium transition-colors ${
                           article.completed
-                            ? "text-emerald-600 hover:text-emerald-700"
-                            : "text-blue-500 hover:text-blue-600"
+                            ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                            : "text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
                         }`}
                       >
                         Read on Wikipedia
@@ -280,7 +291,7 @@ const TrackPage = () => {
                   <div className="flex-shrink-0 ml-6">
                     {article.completed ? (
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 rounded-full text-sm font-medium">
                           <CheckCircle className="h-4 w-4" />
                           Completed
                         </div>
@@ -289,7 +300,7 @@ const TrackPage = () => {
                           size="sm"
                           onClick={() => handleMarkComplete(index)}
                           disabled={updatingArticles.has(index)}
-                          className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                          className="text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
                         >
                           {updatingArticles.has(index) ? "Updating..." : "Undo"}
                         </Button>
@@ -299,7 +310,7 @@ const TrackPage = () => {
                         onClick={() => handleMarkComplete(index)}
                         size="sm"
                         disabled={updatingArticles.has(index)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         {updatingArticles.has(index)
