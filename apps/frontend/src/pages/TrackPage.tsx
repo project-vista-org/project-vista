@@ -279,15 +279,41 @@ const TrackPage = () => {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3
-                          className={`text-lg font-semibold truncate ${
-                            article.completed
-                              ? "text-emerald-900 dark:text-emerald-100"
-                              : "text-foreground dark:text-gray-100"
-                          }`}
-                        >
-                          {article.title}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3
+                            className={`text-lg font-semibold truncate ${
+                              article.completed
+                                ? "text-emerald-900 dark:text-emerald-100"
+                                : "text-foreground dark:text-gray-100"
+                            }`}
+                          >
+                            {article.title}
+                          </h3>
+                          <a
+                            href={article.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex-shrink-0 transition-colors ${
+                              article.completed
+                                ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                                : "text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
+                            }`}
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </a>
+                        </div>
                         <p
                           className={`text-sm ${
                             article.completed
@@ -298,33 +324,6 @@ const TrackPage = () => {
                           Article {index + 1} of {track.articles.length}
                         </p>
                       </div>
-                    </div>
-                    <div className="ml-11">
-                      <a
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`inline-flex items-center gap-1 text-sm font-medium transition-colors ${
-                          article.completed
-                            ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
-                            : "text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
-                        }`}
-                      >
-                        Read on Wikipedia
-                        <svg
-                          className="h-3 w-3"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                      </a>
                     </div>
                   </div>
 

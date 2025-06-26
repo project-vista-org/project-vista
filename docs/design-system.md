@@ -182,5 +182,6 @@ This section defines the visual and behavioral rules for the core components of 
 2.  **Component First:** When asked to build a new UI element, first check if it can be composed from the existing components (`Button`, `Card`, `Input`, `Dialog`). Create new components only when necessary.
 3.  **Use Lucide Icons:** For all iconography, use the `lucide-react` library. Ensure icons are used purposefully and consistently.
 4.  **Prioritize Clarity:** Write simple, readable code. The UI should be self-explanatory. Add helper text or tooltips if an action is complex.
-5.  **Responsive by Default:** All layouts and components must be responsive and work seamlessly on both mobile and desktop screens. Use flexbox, grid, and Tailwind's responsive prefixes (`sm:`, `md:`, `lg:`).
-6.  **Accessibility is Key:** Use semantic HTML (`<main>`, `<nav>`, `<section>`). Ensure all interactive elements are keyboard-navigable and have proper focus states. Use `aria-*` attributes where appropriate.
+5.  **Obvious Intent Rule:** When the intent of an icon or visual element is very obvious from context, avoid redundant text labels. Examples: external link icons don't need "Read on Wikipedia" text, sparkles icons don't need "Auto" labels when indicating auto-generated content.
+6.  **Responsive by Default:** All layouts and components must be responsive and work seamlessly on both mobile and desktop screens. Use flexbox, grid, and Tailwind's responsive prefixes (`sm:`, `md:`, `lg:`).
+7.  **Accessibility is Key:** Use semantic HTML (`<main>`, `<nav>`, `<section>`). Ensure all interactive elements are keyboard-navigable and have proper focus states. Use `aria-*` attributes where appropriate.

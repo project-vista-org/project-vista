@@ -4,9 +4,9 @@
 
 ## 🧠 Product Overview
 
-**Name:** Project Vista  
-**Type:** Knowledge tracking and exploration platform  
-**Tagline:** *Expand your perspective, one track at a time.*  
+**Name:** Project Vista
+**Type:** Knowledge tracking and exploration platform
+**Tagline:** *Expand your perspective, one track at a time.*
 **Goal:** Help individuals explore and retain essential knowledge through structured, track-based learning—using Wikipedia as the foundation and daily, social rhythm as the motivation.
 
 ---
@@ -18,6 +18,7 @@
 - **Social alignment**: Learn together, like Daf Yomi for secular knowledge.
 - **Knowledge graphs**: Topics are connected; learning is nonlinear and cumulative.
 - **Wikipedia-based**: Open, transparent, and deep source of human knowledge.
+- **Obvious intent**: When the meaning of an icon or visual element is clear from context, avoid redundant text labels for a cleaner, more focused interface.
 
 ---
 
@@ -158,4 +159,3 @@ To give users a structured, personal, and socially-aware way to read, track, and
 ## 🚀 Long-Term Vision
 
 > Create the **Daf Yomi** of secular knowledge: shared, global, structured learning for curious minds—without classrooms or gatekeeping.
-
