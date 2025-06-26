@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { supabase } from "@/lib/supabase";
+import { fetchTrack } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
 
 const TrackPage = () => {
@@ -16,26 +18,36 @@ const TrackPage = () => {
   const [track, setTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Get current user
-    const getCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getCurrentUser();
+    const loadUserAndTrack = async () => {
+      try {
+        // Get current user
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setUser(user);
 
-    // This is a mock. Replace with actual data fetching.
-    const savedTracks = localStorage.getItem("projectvista_tracks");
-    if (savedTracks) {
-      const tracks: Track[] = JSON.parse(savedTracks);
-      const currentTrack = tracks.find((t) => t.id === trackId);
-      setTrack(currentTrack || null);
-    }
-    setLoading(false);
-  }, [trackId]);
+        // Fetch track from API
+        if (trackId && user) {
+          const trackData = await fetchTrack(trackId);
+          setTrack(trackData);
+        }
+      } catch (error) {
+        console.error("Failed to load track:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load track. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserAndTrack();
+  }, [trackId, toast]);
 
   if (loading) {
     return <div>Loading...</div>; // Replace with a proper skeleton loader

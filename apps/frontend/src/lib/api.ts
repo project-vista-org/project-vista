@@ -55,3 +55,17 @@ export async function createTrack(
 
   return response.json();
 }
+
+export async function fetchTrack(trackId: string) {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_BASE_URL}/api/tracks/${trackId}`, {
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch track: ${response.statusText}`);
+  }
+
+  return response.json();
+}
