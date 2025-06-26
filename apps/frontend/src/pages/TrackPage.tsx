@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ChevronLeft, Book, CheckCircle, Clock } from "lucide-react";
+import { ChevronLeft, Book, CheckCircle, Clock, Trophy } from "lucide-react";
 import { Track } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -183,27 +183,67 @@ const TrackPage = () => {
         </div>
 
         {/* Progress */}
-        <Card className="mb-8 bg-card dark:bg-gray-800 border border-border dark:border-gray-700 shadow rounded-lg">
+        <Card
+          className={`mb-8 shadow rounded-lg transition-all duration-300 ${
+            progress === 100
+              ? "bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-200 dark:border-emerald-700"
+              : "bg-card dark:bg-gray-800 border border-border dark:border-gray-700"
+          }`}
+        >
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-foreground dark:text-gray-100">
-              Your Progress
+            <CardTitle className="text-xl font-semibold text-foreground dark:text-gray-100 flex items-center gap-2">
+              {progress === 100 ? (
+                <>
+                  <Trophy className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  Track Completed! 🎉
+                </>
+              ) : (
+                "Your Progress"
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
                 <div
-                  className="bg-blue-500 dark:bg-blue-400 h-2.5 rounded-full transition-all duration-500 ease-out"
+                  className={`h-2.5 rounded-full transition-all duration-500 ease-out ${
+                    progress === 100
+                      ? "bg-gradient-to-r from-emerald-500 to-green-500 dark:from-emerald-400 dark:to-green-400"
+                      : "bg-blue-500 dark:bg-blue-400"
+                  }`}
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
-              <span className="font-medium text-foreground dark:text-gray-100 min-w-[3rem] text-right">
+              <span
+                className={`font-medium min-w-[3rem] text-right ${
+                  progress === 100
+                    ? "text-emerald-700 dark:text-emerald-300 font-bold"
+                    : "text-foreground dark:text-gray-100"
+                }`}
+              >
                 {Math.round(progress)}%
               </span>
             </div>
-            <p className="text-sm text-muted-foreground dark:text-gray-400 mt-2">
-              {completedArticles} of {track.articles.length} articles completed.
+            <p
+              className={`text-sm mt-2 ${
+                progress === 100
+                  ? "text-emerald-600 dark:text-emerald-300 font-medium"
+                  : "text-muted-foreground dark:text-gray-400"
+              }`}
+            >
+              {progress === 100
+                ? `🎊 Congratulations! You've completed all ${track.articles.length} articles in this track!`
+                : `${completedArticles} of ${track.articles.length} articles completed.`}
             </p>
+            {progress === 100 && (
+              <div className="mt-4 p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg border border-emerald-200 dark:border-emerald-700">
+                <p className="text-sm text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  You've mastered this learning track! Consider exploring more
+                  tracks or sharing your achievement.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
