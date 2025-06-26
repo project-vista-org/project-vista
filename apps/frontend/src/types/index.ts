@@ -9,7 +9,7 @@ export interface WikipediaArticle {
   title: string;
   url: string;
   description?: string;
-  completed?: boolean;
+  completed: boolean;
 }
 
 export interface Track {

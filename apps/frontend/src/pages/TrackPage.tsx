@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { supabase } from "@/lib/supabase";
-import { fetchTrack } from "@/lib/api";
+import { fetchTrack, updateTrack } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
 
@@ -17,6 +17,9 @@ const TrackPage = () => {
   const { trackId } = useParams<{ trackId: string }>();
   const [track, setTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updatingArticles, setUpdatingArticles] = useState<Set<number>>(
+    new Set(),
+  );
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
 
@@ -49,30 +52,53 @@ const TrackPage = () => {
     loadUserAndTrack();
   }, [trackId, toast]);
 
-  const handleMarkComplete = (articleIndex: number) => {
-    if (!track) return;
+  const handleMarkComplete = async (articleIndex: number) => {
+    if (!track || !trackId) return;
 
-    const updatedTrack = {
-      ...track,
-      articles: track.articles.map((article, index) => {
+    // Add to updating set to show loading state
+    setUpdatingArticles((prev) => new Set(prev).add(articleIndex));
+
+    try {
+      // Create updated articles array
+      const updatedArticles = track.articles.map((article, index) => {
         if (index === articleIndex) {
           return { ...article, completed: !article.completed };
         }
         return article;
-      }),
-    };
+      });
 
-    setTrack(updatedTrack);
+      // Update backend
+      const updatedTrack = await updateTrack(trackId, {
+        articles: updatedArticles,
+      });
 
-    // Show success toast
-    const article = updatedTrack.articles[articleIndex];
-    toast({
-      title: article.completed ? "Article Completed!" : "Article Unmarked",
-      description: article.completed
-        ? `Great job! You've completed "${article.title}"`
-        : `"${article.title}" marked as incomplete`,
-      variant: "default",
-    });
+      // Update local state with backend response
+      setTrack(updatedTrack);
+
+      // Show success toast
+      const article = updatedArticles[articleIndex];
+      toast({
+        title: article.completed ? "Article Completed!" : "Article Unmarked",
+        description: article.completed
+          ? `Great job! You've completed "${article.title}"`
+          : `"${article.title}" marked as incomplete`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Failed to update article completion:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update article. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      // Remove from updating set
+      setUpdatingArticles((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(articleIndex);
+        return newSet;
+      });
+    }
   };
 
   if (loading) {
@@ -262,19 +288,23 @@ const TrackPage = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleMarkComplete(index)}
-                          className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          disabled={updatingArticles.has(index)}
+                          className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                         >
-                          Undo
+                          {updatingArticles.has(index) ? "Updating..." : "Undo"}
                         </Button>
                       </div>
                     ) : (
                       <Button
                         onClick={() => handleMarkComplete(index)}
                         size="sm"
-                        className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+                        disabled={updatingArticles.has(index)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Mark Complete
+                        {updatingArticles.has(index)
+                          ? "Updating..."
+                          : "Mark Complete"}
                       </Button>
                     )}
                   </div>

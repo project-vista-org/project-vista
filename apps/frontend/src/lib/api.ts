@@ -69,3 +69,26 @@ export async function fetchTrack(trackId: string) {
 
   return response.json();
 }
+
+export async function updateTrack(
+  trackId: string,
+  updateData: {
+    title?: string;
+    description?: string;
+    articles?: any[];
+  },
+) {
+  const headers = await getAuthHeaders();
+
+  const response = await fetch(`${API_BASE_URL}/api/tracks/${trackId}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(updateData),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update track: ${response.statusText}`);
+  }
+
+  return response.json();
+}
