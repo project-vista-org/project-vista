@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, BookOpen, Search, Home, List } from "lucide-react";
+import { Plus, BookOpen, Search, Home, List, Compass } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import { Track } from "@/types";
 import TrackCard from "@/components/TrackCard";
@@ -115,7 +115,7 @@ const HomePage = () => {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Tab Navigation */}
-          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8 bg-muted dark:bg-gray-800">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto mb-8 bg-muted dark:bg-gray-800">
             <TabsTrigger
               value="home"
               className="flex items-center gap-2 data-[state=active]:bg-background dark:data-[state=active]:bg-gray-700"
@@ -129,6 +129,13 @@ const HomePage = () => {
             >
               <List className="h-4 w-4" />
               Tracks
+            </TabsTrigger>
+            <TabsTrigger
+              value="explore"
+              className="flex items-center gap-2 data-[state=active]:bg-background dark:data-[state=active]:bg-gray-700"
+            >
+              <Compass className="h-4 w-4" />
+              Explore
             </TabsTrigger>
           </TabsList>
 
@@ -226,6 +233,20 @@ const HomePage = () => {
                 </div>
               </div>
             )}
+          </TabsContent>
+
+          {/* Explore Tab Content */}
+          <TabsContent value="explore" className="space-y-6">
+            <div className="text-center py-16">
+              <div className="max-w-md mx-auto">
+                <h2 className="text-3xl font-bold text-foreground mb-4">
+                  Explore
+                </h2>
+                <p className="text-muted-foreground dark:text-gray-300">
+                  Explore more tracks
+                </p>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
