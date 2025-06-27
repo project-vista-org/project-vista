@@ -1,11 +1,16 @@
 import uvicorn
 from apps.backend.app.auth import get_current_user
 from apps.backend.app.database import create_db_and_tables
+from apps.backend.app.logging_config import logger
+from apps.backend.app.middleware import LoggingMiddleware
 from apps.backend.app.routes import tracks
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Project Vista API", version="1.0.0")
+
+# Add logging middleware (should be first)
+app.add_middleware(LoggingMiddleware)
 
 # CORS middleware
 app.add_middleware(
@@ -20,11 +25,14 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on startup"""
+    logger.info("Starting Project Vista API...")
     await create_db_and_tables()
+    logger.info("Database tables initialized")
 
 
 @app.get("/")
 def read_root():
+    logger.info("Root endpoint accessed")
     return {"message": "Project Vista API", "status": "running"}
 
 

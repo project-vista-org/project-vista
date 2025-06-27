@@ -2,6 +2,7 @@ from typing import List
 
 from apps.backend.app.auth import get_current_user
 from apps.backend.app.database import get_session
+from apps.backend.app.logging_config import logger
 from apps.backend.app.models.track import TrackCreate, TrackResponse, TrackUpdate
 from apps.backend.app.models.user import User
 from apps.backend.app.repositories.tracks_repository import TracksRepository
@@ -11,6 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/tracks", tags=["tracks"])
 
+# Create service instances
+tracks_repository = TracksRepository()
+tracks_service = TracksService()
+
 
 @router.get("/", response_model=List[TrackResponse])
 async def get_tracks(
@@ -18,7 +23,8 @@ async def get_tracks(
     session: AsyncSession = Depends(get_session),
 ):
     """Get all tracks for the authenticated user"""
-    return await TracksRepository.find_by_user_id(
+    logger.info(f"Fetching tracks for user: {current_user.id}")
+    return await tracks_repository.find_by_user_id(
         user_id=current_user.id, session=session
     )
 
@@ -30,7 +36,10 @@ async def create_track(
     session: AsyncSession = Depends(get_session),
 ):
     """Create a new track for the authenticated user"""
-    return await TracksService.create_track(
+    logger.info(
+        f"Creating track for user: {current_user.id}, title: {track_data.title}"
+    )
+    return await tracks_service.create_track(
         track_data=track_data, user_id=current_user.id, session=session
     )
 
@@ -62,7 +71,8 @@ async def update_track(
     session: AsyncSession = Depends(get_session),
 ):
     """Update a track (must belong to the authenticated user)"""
-    return await TracksService.update_track(
+    logger.info(f"Updating track {track_id} for user: {current_user.id}")
+    return await tracks_service.update_track(
         track_id=track_id,
         track_data=track_data,
         user_id=current_user.id,
@@ -77,7 +87,8 @@ async def delete_track(
     session: AsyncSession = Depends(get_session),
 ):
     """Delete a track (must belong to the authenticated user)"""
-    await TracksService.delete_track(
+    logger.info(f"Deleting track {track_id} for user: {current_user.id}")
+    await tracks_service.delete_track(
         track_id=track_id, user_id=current_user.id, session=session
     )
     return None

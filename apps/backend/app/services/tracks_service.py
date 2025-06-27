@@ -9,9 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 class TracksService:
     """Service for Track business logic"""
 
-    @staticmethod
+    def __init__(self):
+        self.tracks_repository = TracksRepository()
+
     async def create_track(
-        track_data: TrackCreate, user_id: str, session: AsyncSession
+        self, track_data: TrackCreate, user_id: str, session: AsyncSession
     ) -> Track:
         """Create a new track with business logic"""
         track = Track(
@@ -20,11 +22,14 @@ class TracksService:
             user_id=user_id,
             articles=[article.model_dump() for article in track_data.articles],
         )
-        return await TracksRepository.create(track=track, session=session)
+        return await self.tracks_repository.create(track=track, session=session)
 
-    @staticmethod
     async def update_track(
-        track_id: str, track_data: TrackUpdate, user_id: str, session: AsyncSession
+        self,
+        track_id: str,
+        track_data: TrackUpdate,
+        user_id: str,
+        session: AsyncSession,
     ) -> Track:
         """Update a track with business logic and validation"""
         track = await TracksRepository.find_by_id_and_user_id(
@@ -48,8 +53,9 @@ class TracksService:
 
         return await TracksRepository.update(track=track, session=session)
 
-    @staticmethod
-    async def delete_track(track_id: str, user_id: str, session: AsyncSession) -> None:
+    async def delete_track(
+        self, track_id: str, user_id: str, session: AsyncSession
+    ) -> None:
         """Delete a track with validation"""
         track = await TracksRepository.find_by_id_and_user_id(
             track_id=track_id, user_id=user_id, session=session
