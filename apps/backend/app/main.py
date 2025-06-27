@@ -1,11 +1,17 @@
+import logging.config
+
 import uvicorn
 from apps.backend.app.auth import get_current_user
 from apps.backend.app.database import create_db_and_tables
-from apps.backend.app.logging_config import logger
+from apps.backend.app.logging_config import get_logging_config, logger
 from apps.backend.app.middleware import LoggingMiddleware
 from apps.backend.app.routes import tracks
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Initialize logging configuration
+logging_config = get_logging_config()
+logging.config.dictConfig(logging_config)
 
 app = FastAPI(title="Project Vista API", version="1.0.0")
 

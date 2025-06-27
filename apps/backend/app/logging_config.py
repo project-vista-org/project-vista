@@ -4,16 +4,15 @@ import os
 from typing import Any, Dict
 
 import boto3
-from watchtower import CloudWatchLogsHandler
 
 
 def get_logging_config() -> Dict[str, Any]:
     """Get logging configuration based on environment"""
 
     # Get environment variables
-    environment = os.getenv("ENVIRONMENT", "development")
-    aws_region = os.getenv("AWS_REGION", "us-east-1")
-    log_group_name = os.getenv("LOG_GROUP_NAME", f"project-vista-{environment}")
+    environment = os.getenv("ENVIRONMENT", "dev")
+    aws_region = os.getenv("AWS_REGION", "eu-north-1")
+    log_group_name = f"project-vista-{environment}"
 
     # Base logging configuration
     config = {
@@ -61,21 +60,18 @@ def get_logging_config() -> Dict[str, Any]:
     }
 
     # Add CloudWatch handler for production/staging
-    if environment in ["production", "staging"]:
+    if environment in ["prod", "staging"]:
         try:
             # Create CloudWatch handler
-            cloudwatch_handler = CloudWatchLogsHandler(
-                log_group=log_group_name,
-                stream_name=f"{environment}-api",
-                boto3_client=boto3.client('logs', region_name=aws_region),
-                max_batch_size=10,
-                max_batch_count=10000,
-            )
-
             config["handlers"]["cloudwatch"] = {
-                "()": cloudwatch_handler,
+                "class": "watchtower.CloudWatchLogHandler",
+                "log_group": log_group_name,
+                "stream_name": f"{environment}-api",
+                "boto3_client": boto3.client('logs', region_name=aws_region),
                 "level": "INFO",
                 "formatter": "detailed",
+                "max_batch_size": 10,
+                "max_batch_count": 10000,
             }
 
             # Add cloudwatch to all loggers
@@ -98,7 +94,7 @@ def setup_logging():
 
     # Get the project logger
     logger = logging.getLogger("project_vista")
-    environment = os.getenv("ENVIRONMENT", "development")
+    environment = os.getenv("ENVIRONMENT", "dev")
 
     logger.info(f"Logging initialized for environment: {environment}")
     return logger
