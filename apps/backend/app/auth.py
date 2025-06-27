@@ -4,12 +4,12 @@ from typing import Optional
 
 from apps.backend.app.database import get_session
 from apps.backend.app.models.user import User
+from apps.backend.app.utils import load_env
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from supabase import Client, create_client
-from utils import load_env
 
 # Load environment variables from .env file
 load_env()

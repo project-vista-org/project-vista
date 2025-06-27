@@ -1,9 +1,9 @@
 import os
 from typing import AsyncGenerator
 
+from apps.backend.app.utils import load_env
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlmodel import SQLModel
-from utils import load_env
 
 # Load environment variables from .env file
 load_env()
