@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, BookOpen, Search } from "lucide-react";
+import { Plus, BookOpen, Search, Home, List } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import { Track } from "@/types";
 import TrackCard from "@/components/TrackCard";
@@ -10,12 +10,14 @@ import UserMenu from "@/components/UserMenu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase, signOut } from "@/lib/supabase";
 import { fetchTracks, createTrack } from "@/lib/api";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const HomePage = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState("home");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -111,84 +113,121 @@ const HomePage = () => {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-foreground mb-2">
-              My Learning Tracks
-            </h2>
-            <p className="text-muted-foreground dark:text-gray-300">
-              Create and organize your personal knowledge journeys
-            </p>
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          {/* Tab Navigation */}
+          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8 bg-muted dark:bg-gray-800">
+            <TabsTrigger
+              value="home"
+              className="flex items-center gap-2 data-[state=active]:bg-background dark:data-[state=active]:bg-gray-700"
+            >
+              <Home className="h-4 w-4" />
+              Home
+            </TabsTrigger>
+            <TabsTrigger
+              value="tracks"
+              className="flex items-center gap-2 data-[state=active]:bg-background dark:data-[state=active]:bg-gray-700"
+            >
+              <List className="h-4 w-4" />
+              Tracks
+            </TabsTrigger>
+          </TabsList>
 
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="bg-accent-blue dark:bg-accent-blue-dark text-white px-6 py-3 rounded-lg font-medium hover:bg-accent-blue-hover dark:hover:bg-accent-blue-hover-dark transition-colors flex items-center gap-2 self-start sm:self-auto"
-          >
-            <Plus className="h-5 w-5" />
-            Create Track
-          </button>
-        </div>
-
-        {/* Search */}
-        {tracks.length > 0 && (
-          <div className="mb-8">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground dark:text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search your tracks..."
-                className="w-full pl-10 pr-4 py-3 bg-background dark:bg-gray-800 border border-input dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-accent-blue dark:focus:ring-accent-blue-dark focus:border-transparent text-foreground dark:text-gray-50 placeholder-muted-foreground dark:placeholder-gray-400"
-              />
+          {/* Home Tab Content */}
+          <TabsContent value="home" className="space-y-6">
+            <div className="text-center py-16">
+              <div className="max-w-md mx-auto">
+                <h2 className="text-3xl font-bold text-foreground mb-4">
+                  Hello
+                </h2>
+                <p className="text-muted-foreground dark:text-gray-300">
+                  Welcome to ProjectVista. More content coming soon!
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          </TabsContent>
 
-        {/* Tracks Grid */}
-        {filteredTracks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTracks.map((track) => (
-              <TrackCard
-                key={track.id}
-                track={track}
-                onClick={() => handleTrackClick(track)}
-              />
-            ))}
-          </div>
-        ) : tracks.length > 0 ? (
-          <div className="text-center py-12">
-            <Search className="h-12 w-12 text-muted-foreground dark:text-gray-400 mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-medium text-foreground mb-2">
-              No tracks found
-            </h3>
-            <p className="text-muted-foreground dark:text-gray-300">
-              Try adjusting your search terms
-            </p>
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="max-w-md mx-auto">
-              <BookOpen className="h-16 w-16 text-muted-foreground dark:text-gray-400 mx-auto mb-6 opacity-50" />
-              <h3 className="text-2xl font-semibold text-foreground mb-4">
-                Start Your Learning Journey
-              </h3>
-              <p className="text-muted-foreground dark:text-gray-300 mb-8 leading-relaxed">
-                Create your first learning track by organizing Wikipedia
-                articles into a structured path of knowledge.
-              </p>
+          {/* Tracks Tab Content */}
+          <TabsContent value="tracks" className="space-y-6">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-bold text-foreground mb-2">
+                  My Learning Tracks
+                </h2>
+                <p className="text-muted-foreground dark:text-gray-300">
+                  Create and organize your personal knowledge journeys
+                </p>
+              </div>
+
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-accent-blue dark:bg-accent-blue-dark text-white px-8 py-4 rounded-lg font-medium hover:bg-accent-blue-hover dark:hover:bg-accent-blue-hover-dark transition-colors inline-flex items-center gap-3"
+                className="bg-blue-500 dark:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors flex items-center gap-2 self-start sm:self-auto"
               >
                 <Plus className="h-5 w-5" />
-                Create Your First Track
+                Create Track
               </button>
             </div>
-          </div>
-        )}
+
+            {/* Search */}
+            {tracks.length > 0 && (
+              <div>
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground dark:text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search your tracks..."
+                    className="w-full pl-10 pr-4 py-3 bg-background dark:bg-gray-800 border border-input dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-foreground dark:text-gray-50 placeholder-muted-foreground dark:placeholder-gray-400"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Tracks Grid */}
+            {filteredTracks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredTracks.map((track) => (
+                  <TrackCard
+                    key={track.id}
+                    track={track}
+                    onClick={() => handleTrackClick(track)}
+                  />
+                ))}
+              </div>
+            ) : tracks.length > 0 ? (
+              <div className="text-center py-12">
+                <Search className="h-12 w-12 text-muted-foreground dark:text-gray-400 mx-auto mb-4 opacity-50" />
+                <h3 className="text-xl font-medium text-foreground mb-2">
+                  No tracks found
+                </h3>
+                <p className="text-muted-foreground dark:text-gray-300">
+                  Try adjusting your search terms
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="max-w-md mx-auto">
+                  <BookOpen className="h-16 w-16 text-muted-foreground dark:text-gray-400 mx-auto mb-6 opacity-50" />
+                  <h3 className="text-2xl font-semibold text-foreground mb-4">
+                    Start Your Learning Journey
+                  </h3>
+                  <p className="text-muted-foreground dark:text-gray-300 mb-8 leading-relaxed">
+                    Create your first learning track by organizing Wikipedia
+                    articles into a structured path of knowledge.
+                  </p>
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-blue-500 dark:bg-blue-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors inline-flex items-center gap-3"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Create Your First Track
+                  </button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Create Track Modal */}
