@@ -24,17 +24,16 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
+          const API_BASE_URL =
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
           if (token) {
             // Sync user with backend database
-            await fetch(
-              `${import.meta.env.VITE_API_BASE_URL}/api/user/profile`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
+            await fetch(`${API_BASE_URL}/api/user/profile`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
               },
-            );
+            });
           }
         } catch (error) {
           console.warn("Failed to sync user with backend:", error);

@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 import { logger } from "./logger";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL || "http://13.61.194.192";
 
 async function getAuthHeaders() {
   const {
