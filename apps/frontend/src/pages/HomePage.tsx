@@ -8,6 +8,8 @@ import {
   List,
   Compass,
   Menu,
+  X,
+  Layers3,
 } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import { Track } from "@/types";
@@ -46,7 +48,7 @@ const NavigationSidebar = ({
   activeView: string;
   setActiveView: (view: string) => void;
 }) => {
-  const { setOpenMobile, isMobile } = useSidebar();
+  const { setOpenMobile, setOpen, isMobile, toggleSidebar } = useSidebar();
 
   const handleNavClick = (viewId: string) => {
     setActiveView(viewId);
@@ -55,31 +57,66 @@ const NavigationSidebar = ({
     }
   };
 
+  const handleCloseSidebar = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  };
+
   return (
     <Sidebar
       className="border-r border-border dark:border-gray-700"
       collapsible="offcanvas"
     >
-      <SidebarHeader className="border-b border-border dark:border-gray-700 p-4">
-        <h2 className="text-lg font-semibold text-foreground">ProjectVista</h2>
+      <SidebarHeader className="border-b border-border dark:border-gray-700 px-4 h-16">
+        <div className="flex items-center justify-between w-full h-full">
+          <Layers3 className="h-6 w-6 text-blue-500" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCloseSidebar}
+            className="h-8 w-8 p-0 hover:bg-accent"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
+      <SidebarContent className="p-2">
+        <SidebarMenu className="space-y-1">
           {navigationItems.map((item) => (
             <SidebarMenuItem key={item.id}>
               <SidebarMenuButton
                 onClick={() => handleNavClick(item.id)}
                 isActive={activeView === item.id}
-                className="w-full justify-start"
+                className="w-full justify-start px-4 py-3 rounded-md hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
               >
-                <item.icon className="h-4 w-4" />
-                <span>{item.label}</span>
+                <item.icon className="h-5 w-5 mr-3" />
+                <span className="text-sm font-medium">{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
       </SidebarContent>
     </Sidebar>
+  );
+};
+
+// Header Content Component
+const HeaderContent = () => {
+  const { open, isMobile } = useSidebar();
+
+  // Show title when sidebar is closed OR when on wide screen with sidebar open
+  const showTitle = !open || (!isMobile && open);
+
+  return (
+    <div className="flex items-center gap-3">
+      <SidebarTrigger />
+      {showTitle && (
+        <h1 className="text-2xl font-bold text-foreground">ProjectVista</h1>
+      )}
+    </div>
   );
 };
 
@@ -177,13 +214,7 @@ const HomePage = () => {
           <header className="bg-background dark:bg-gray-900 border-b border-border dark:border-gray-700 sticky top-0 z-40">
             <div className="px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16">
-                <div className="flex items-center gap-3">
-                  <SidebarTrigger />
-                  <h1 className="text-2xl font-bold text-foreground">
-                    ProjectVista
-                  </h1>
-                </div>
-
+                <HeaderContent />
                 <div className="flex items-center gap-4">
                   <ThemeToggle />
                   <UserMenu user={user} />
