@@ -6,7 +6,13 @@ const API_BASE_URL =
 async function getAuthHeaders() {
   const {
     data: { session },
+    error,
   } = await supabase.auth.getSession();
+
+  if (error) {
+    console.error("Session error:", error);
+    throw new Error("Authentication error");
+  }
 
   if (!session?.access_token) {
     throw new Error("Not authenticated");
@@ -18,12 +24,49 @@ async function getAuthHeaders() {
   };
 }
 
-export async function fetchTracks() {
-  const headers = await getAuthHeaders();
+// Add a wrapper function for API calls with automatic retry on token expiry
+export async function apiCall(url: string, options: RequestInit = {}) {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+    });
 
-  const response = await fetch(`${API_BASE_URL}/api/tracks/`, {
-    headers,
-  });
+    // If we get a 401, try to refresh the session and retry once
+    if (response.status === 401) {
+      console.log("Token expired, attempting refresh...");
+      const { error } = await supabase.auth.refreshSession();
+
+      if (error) {
+        console.error("Session refresh failed:", error);
+        // Redirect to login or handle auth failure
+        throw new Error("Session expired, please log in again");
+      }
+
+      // Retry with new token
+      const newHeaders = await getAuthHeaders();
+      return fetch(`${API_BASE_URL}${url}`, {
+        ...options,
+        headers: {
+          ...newHeaders,
+          ...options.headers,
+        },
+      });
+    }
+
+    return response;
+  } catch (error) {
+    console.error("API call failed:", error);
+    throw error;
+  }
+}
+
+export async function fetchTracks() {
+  const response = await apiCall("/api/tracks/");
 
   if (!response.ok) {
     throw new Error(`Failed to fetch tracks: ${response.statusText}`);
@@ -37,11 +80,8 @@ export async function createTrack(
   articles: any[],
   description?: string,
 ) {
-  const headers = await getAuthHeaders();
-
-  const response = await fetch(`${API_BASE_URL}/api/tracks/`, {
+  const response = await apiCall("/api/tracks/", {
     method: "POST",
-    headers,
     body: JSON.stringify({
       title,
       description,
@@ -57,11 +97,7 @@ export async function createTrack(
 }
 
 export async function fetchTrack(trackId: string) {
-  const headers = await getAuthHeaders();
-
-  const response = await fetch(`${API_BASE_URL}/api/tracks/${trackId}`, {
-    headers,
-  });
+  const response = await apiCall(`/api/tracks/${trackId}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch track: ${response.statusText}`);
@@ -78,11 +114,8 @@ export async function updateTrack(
     articles?: any[];
   },
 ) {
-  const headers = await getAuthHeaders();
-
-  const response = await fetch(`${API_BASE_URL}/api/tracks/${trackId}`, {
+  const response = await apiCall(`/api/tracks/${trackId}`, {
     method: "PUT",
-    headers,
     body: JSON.stringify(updateData),
   });
 
