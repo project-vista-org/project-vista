@@ -9,7 +9,9 @@ This guide sets the ground rules for AI-assisted development in this codebase. I
 
 ---
 
-For commit messages, keep them super short and concise. Just a couple of sentences max.
+- when trying to contant github mcp, remember the owner is project-vista-org
+- Never ever commit or push or revery or do any github cli actions without me explicitly telling you to do so
+- For commit messages, keep them super short and concise. Just a couple of sentences max.
 
 ---
 
