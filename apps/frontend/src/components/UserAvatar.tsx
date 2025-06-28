@@ -45,25 +45,12 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = "md" }) => {
 
   const avatarUrl = user?.user_metadata?.avatar_url;
 
-  // Debug logging to help diagnose avatar issues
-  console.log("UserAvatar debug:", {
-    user: user ? "exists" : "null",
-    userMetadata: user?.user_metadata,
-    avatarUrl,
-    fullName: user?.user_metadata?.full_name,
-    email: user?.email,
-  });
-
   return (
     <Avatar className={getAvatarSize()}>
       {avatarUrl ? (
         <AvatarImage
           src={avatarUrl}
           alt={user?.user_metadata?.full_name || "User"}
-          onError={() => console.log("Avatar image failed to load:", avatarUrl)}
-          onLoad={() =>
-            console.log("Avatar image loaded successfully:", avatarUrl)
-          }
         />
       ) : null}
       <AvatarFallback className="bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-200">

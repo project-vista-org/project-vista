@@ -327,36 +327,11 @@ const CommunityTrackCard = ({
   track: CommunityTrack;
   onJoin: (trackId: string) => void;
 }) => {
-  const getDifficultyColor = (difficulty: CommunityTrack["difficulty"]) => {
-    switch (difficulty) {
-      case "Beginner":
-        return "bg-emerald-500";
-      case "Intermediate":
-        return "bg-amber-500";
-      case "Advanced":
-        return "bg-red-500";
-    }
-  };
-
   return (
     <Card className="transition-shadow hover:shadow-sm cursor-pointer group">
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              {track.featured && (
-                <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-              )}
-              {track.trending && (
-                <TrendingUp className="h-4 w-4 text-blue-500" />
-              )}
-              <Badge
-                variant="secondary"
-                className={`text-white text-xs ${getDifficultyColor(track.difficulty)}`}
-              >
-                {track.difficulty}
-              </Badge>
-            </div>
             <CardTitle className="text-lg font-bold text-foreground mb-2 group-hover:text-blue-500 transition-colors">
               {track.title}
             </CardTitle>
@@ -404,15 +379,10 @@ const CommunityTrackCard = ({
 
         {/* Community Stats */}
         <div className="space-y-3 mb-4">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-500" />
-              <span className="font-medium text-foreground">
-                {track.participantCount} participants
-              </span>
-            </div>
-            <span className="text-muted-foreground">
-              {track.completedThisWeek} completed this week
+          <div className="flex items-center gap-2 text-sm">
+            <Users className="h-4 w-4 text-blue-500" />
+            <span className="font-medium text-foreground">
+              {track.participantCount} participants
             </span>
           </div>
 
@@ -476,17 +446,6 @@ const CommunityTrackCard = ({
             </>
           )}
         </Button>
-
-        {/* Optional Customize Button */}
-        {!track.isJoined && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground"
-          >
-            Customize & Make My Own
-          </Button>
-        )}
       </CardContent>
     </Card>
   );
