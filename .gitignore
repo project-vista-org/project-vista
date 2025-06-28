@@ -48,3 +48,6 @@ Thumbs.db
 
 # AI
 mcp.json
+
+# Secrets
+*.pem

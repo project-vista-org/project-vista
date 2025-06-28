@@ -47,10 +47,30 @@ This document outlines the full technical stack used to build and deploy **The V
 | Layer            | Tool / Service            | Purpose                                          |
 |------------------|---------------------------|--------------------------------------------------|
 | **Hosting (FE)**  | Vercel                    | Serverless deploy for React frontend             |
-| **Hosting (BE)**  | AWS Lambda                | FastAPI deployed as serverless function          |
-| **API Gateway**   | AWS API Gateway           | Exposes Lambda endpoints as REST API            |
+| **Hosting (BE)**  | AWS EC2                   | Backend API running in Docker container          |
+| **HTTPS & CDN**   | Cloudflare Tunnel         | Secure HTTPS access with built-in CDN           |
+| **API Gateway**   | Cloudflare Proxy          | Routes HTTPS traffic to EC2 backend             |
 | **Static Storage**| AWS S3                    | Stores generated article summaries or files     |
 | **Database**      | Supabase (PostgreSQL)     | Managed PostgreSQL with auth and real-time      |
+
+---
+
+## 🌐 Domain & HTTPS Setup
+
+| Component         | Choice                     | Notes                                      |
+|-------------------|----------------------------|--------------------------------------------|
+| **Domain**         | project-vista.com          | Registered and managed through Cloudflare  |
+| **DNS Management** | Cloudflare DNS             | DNS records with orange cloud (proxied)    |
+| **SSL/TLS**        | Cloudflare SSL             | Automatic HTTPS with valid certificates    |
+| **Tunnel**         | Cloudflare Tunnel          | Secure tunnel from EC2 to Cloudflare edge  |
+| **API Endpoint**   | api.project-vista.com      | Custom subdomain for backend API          |
+| **Backend Port**   | 80 (Docker proxy)          | FastAPI running in container on EC2        |
+
+### Tunnel Configuration
+- **Tunnel ID**: `e39fdaa8-0523-4161-98ff-c95bd1302ae0`
+- **Service**: `http://localhost:80` (routes to Docker container)
+- **DNS Record**: `CNAME api -> tunnel_id.cfargotunnel.com`
+- **Proxy Status**: Enabled (Orange cloud) for security and performance
 
 ---
 
@@ -100,9 +120,21 @@ This document outlines the full technical stack used to build and deploy **The V
 | Tool                | Purpose                                  |
 |---------------------|------------------------------------------|
 | **GitHub Actions**   | CI/CD for tests + deployments            |
-| **Zappa** *(BE)*     | Deploy FastAPI to Lambda easily          |
-| **Docker (optional)**| Local Postgres or backend isolation      |
+| **Docker**          | Backend containerization on EC2         |
+| **systemctl**       | Managing cloudflared tunnel service     |
+| **cloudflared**     | Cloudflare tunnel daemon on EC2         |
 | **Monorepo Tooling** | Basic NPM + custom scripts (`concurrently`) |
+
+### Service Management Commands
+```bash
+# Tunnel service management on EC2
+sudo systemctl start cloudflared
+sudo systemctl status cloudflared
+sudo systemctl enable cloudflared
+
+# Check tunnel logs
+sudo journalctl -u cloudflared -f
+```
 
 ---
 
@@ -110,10 +142,13 @@ This document outlines the full technical stack used to build and deploy **The V
 
 - Store secrets using Supabase environment variables
 - Sanitize all Wikipedia inputs before display
-- Enforce HTTPS (API Gateway + Vercel provide this by default)
+- Enforce HTTPS via Cloudflare Tunnel with automatic SSL certificates
+- Cloudflare DDoS protection and Web Application Firewall (WAF)
 - Apply CORS rules in FastAPI config
 - JWT tokens are short-lived and refreshable via Supabase
 - Row Level Security (RLS) policies in PostgreSQL
+- EC2 backend protected behind Cloudflare tunnel (no direct internet access)
+- DNS proxied through Cloudflare for additional security and caching
 
 ---
 
@@ -133,6 +168,7 @@ This document outlines the full technical stack used to build and deploy **The V
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_API_BASE_URL=https://api.project-vista.com
 ```
 
 ### Backend (.env)
@@ -140,6 +176,12 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 DATABASE_URL=your_postgres_connection_string
+```
+
+### Cloudflare Tunnel
+```bash
+# Tunnel service runs with this token on EC2
+CLOUDFLARE_TUNNEL_TOKEN=your_tunnel_token
 ```
 
 ---
