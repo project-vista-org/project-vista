@@ -49,11 +49,17 @@ const NavigationSidebar = ({
   setActiveView: (view: string) => void;
 }) => {
   const { setOpenMobile, setOpen, isMobile, toggleSidebar } = useSidebar();
+  const navigate = useNavigate();
 
   const handleNavClick = (viewId: string) => {
     setActiveView(viewId);
     if (isMobile) {
       setOpenMobile(false);
+    }
+
+    // Navigate to explore page
+    if (viewId === "explore") {
+      navigate("/explore");
     }
   };
 
