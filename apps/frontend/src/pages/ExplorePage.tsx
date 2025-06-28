@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Star,
-  TrendingUp,
-  Target,
-  Filter,
-  Search,
   Users,
   BookOpen,
   Clock,
@@ -15,23 +10,12 @@ import {
   Menu,
   X,
   Layers3,
-  Heart,
   Eye,
   Plus,
 } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   SidebarProvider,
   Sidebar,
@@ -361,68 +345,14 @@ const CommunityTrackCard = ({
       </CardHeader>
 
       <CardContent className="pt-0">
-        {/* Creator Info */}
-        <div className="flex items-center gap-2 mb-4">
-          <Avatar className="h-6 w-6">
-            <AvatarImage src={track.creator.avatar} />
-            <AvatarFallback className="text-xs">
-              {track.creator.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-sm text-muted-foreground">
-            by {track.creator.name}
-          </span>
-        </div>
-
         {/* Community Stats */}
-        <div className="space-y-3 mb-4">
+        <div className="mb-4">
           <div className="flex items-center gap-2 text-sm">
             <Users className="h-4 w-4 text-blue-500" />
             <span className="font-medium text-foreground">
               {track.participantCount} participants
             </span>
           </div>
-
-          {/* Recent Participants */}
-          <div className="flex items-center gap-2">
-            <div className="flex -space-x-2">
-              {track.recentParticipants
-                .slice(0, 3)
-                .map((participant, index) => (
-                  <Avatar
-                    key={participant.id}
-                    className="h-6 w-6 border-2 border-background"
-                  >
-                    <AvatarImage src={participant.avatar} />
-                    <AvatarFallback className="text-xs">
-                      {participant.name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              {track.recentParticipants.length > 3 && (
-                <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                  <span className="text-xs text-muted-foreground">
-                    +{track.recentParticipants.length - 3}
-                  </span>
-                </div>
-              )}
-            </div>
-            <span className="text-xs text-muted-foreground">
-              Recently active
-            </span>
-          </div>
-        </div>
-
-        {/* Categories */}
-        <div className="flex flex-wrap gap-1 mb-4">
-          {track.categories.map((category) => (
-            <Badge key={category} variant="outline" className="text-xs">
-              {category}
-            </Badge>
-          ))}
         </div>
 
         {/* Action Button */}
@@ -455,36 +385,16 @@ const CommunityTrackCard = ({
 const ExplorePage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeView, setActiveView] = useState("explore");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [joinedTracks, setJoinedTracks] = useState<Set<string>>(
     new Set(["2", "6"]),
   );
+  const [displayedCount, setDisplayedCount] = useState(3);
   const { toast } = useToast();
 
-  // Get unique categories from tracks
-  const categories = Array.from(
-    new Set(mockCommunityTracks.flatMap((track) => track.categories)),
-  ).sort();
-
-  // Filter tracks based on search and category
-  const filteredTracks = mockCommunityTracks.filter((track) => {
-    const matchesSearch =
-      track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      track.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || track.categories.includes(selectedCategory);
-    return matchesSearch && matchesCategory;
-  });
-
-  // Separate tracks into sections
-  const staffPicks = filteredTracks.filter((track) => track.featured);
-  const trending = filteredTracks.filter((track) => track.trending);
-  const forYou = filteredTracks.filter((track) =>
-    track.categories.some((cat) =>
-      ["Technology", "Science", "Physics"].includes(cat),
-    ),
-  );
+  // Show all tracks in one list
+  const allTracks = mockCommunityTracks;
+  const displayedTracks = allTracks.slice(0, displayedCount);
+  const hasMoreTracks = displayedCount < allTracks.length;
 
   useEffect(() => {
     // Get current user
@@ -519,10 +429,14 @@ const ExplorePage = () => {
   };
 
   // Update track join status based on state
-  const tracksWithJoinStatus = mockCommunityTracks.map((track) => ({
+  const tracksWithJoinStatus = displayedTracks.map((track) => ({
     ...track,
     isJoined: joinedTracks.has(track.id),
   }));
+
+  const handleSeeMore = () => {
+    setDisplayedCount((prev) => prev + 3);
+  };
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -562,145 +476,28 @@ const ExplorePage = () => {
                 </p>
               </div>
 
-              {/* Search and Filter */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search community tracks..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+              {/* Community Tracks Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {tracksWithJoinStatus.map((track) => (
+                  <CommunityTrackCard
+                    key={track.id}
+                    track={track}
+                    onJoin={handleJoinTrack}
                   />
-                </div>
-                <Select
-                  value={selectedCategory}
-                  onValueChange={setSelectedCategory}
-                >
-                  <SelectTrigger className="w-full sm:w-48">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                ))}
               </div>
 
-              {/* Staff Picks Section */}
-              {staffPicks.length > 0 && (
-                <section className="mb-12">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Star className="h-6 w-6 text-amber-500" />
-                    <h2 className="text-2xl font-bold text-foreground">
-                      Staff Picks
-                    </h2>
-                    <Badge
-                      variant="secondary"
-                      className="bg-amber-100 text-amber-800"
-                    >
-                      Curated by Project Vista Team
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {staffPicks.map((track) => (
-                      <CommunityTrackCard
-                        key={track.id}
-                        track={
-                          tracksWithJoinStatus.find((t) => t.id === track.id)!
-                        }
-                        onJoin={handleJoinTrack}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Trending Section */}
-              {trending.length > 0 && (
-                <section className="mb-12">
-                  <div className="flex items-center gap-3 mb-6">
-                    <TrendingUp className="h-6 w-6 text-blue-500" />
-                    <h2 className="text-2xl font-bold text-foreground">
-                      Trending
-                    </h2>
-                    <Badge
-                      variant="secondary"
-                      className="bg-blue-100 text-blue-800"
-                    >
-                      Most Active This Week
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {trending.map((track) => (
-                      <CommunityTrackCard
-                        key={track.id}
-                        track={
-                          tracksWithJoinStatus.find((t) => t.id === track.id)!
-                        }
-                        onJoin={handleJoinTrack}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* For You Section */}
-              {forYou.length > 0 && (
-                <section className="mb-12">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Target className="h-6 w-6 text-emerald-500" />
-                    <h2 className="text-2xl font-bold text-foreground">
-                      For You
-                    </h2>
-                    <Badge
-                      variant="secondary"
-                      className="bg-emerald-100 text-emerald-800"
-                    >
-                      Based on your interests
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {forYou.map((track) => (
-                      <CommunityTrackCard
-                        key={track.id}
-                        track={
-                          tracksWithJoinStatus.find((t) => t.id === track.id)!
-                        }
-                        onJoin={handleJoinTrack}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* No Results */}
-              {filteredTracks.length === 0 && (
-                <div className="text-center py-16">
-                  <Compass className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    No tracks found
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    Try adjusting your search or filters to discover more
-                    community tracks
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSelectedCategory("all");
-                    }}
-                  >
-                    Clear filters
-                  </Button>
-                </div>
-              )}
+              {/* See More Button */}
+              <div className="text-center">
+                <Button
+                  variant="outline"
+                  onClick={handleSeeMore}
+                  disabled={!hasMoreTracks}
+                  className="px-8 py-2"
+                >
+                  {hasMoreTracks ? "See More" : "No More Tracks"}
+                </Button>
+              </div>
             </div>
           </main>
         </div>
