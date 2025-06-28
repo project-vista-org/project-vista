@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ChevronLeft, Book, CheckCircle, Clock, Trophy } from "lucide-react";
+import {
+  ChevronLeft,
+  Book,
+  CheckCircle,
+  Clock,
+  Trophy,
+  BookOpen,
+} from "lucide-react";
 import { Track } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -328,35 +335,56 @@ const TrackPage = () => {
                   </div>
 
                   <div className="flex-shrink-0 ml-6">
-                    {article.completed ? (
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 rounded-full text-sm font-medium">
-                          <CheckCircle className="h-4 w-4" />
-                          Completed
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleMarkComplete(index)}
-                          disabled={updatingArticles.has(index)}
-                          className="text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-                        >
-                          {updatingArticles.has(index) ? "Updating..." : "Undo"}
-                        </Button>
-                      </div>
-                    ) : (
+                    <div className="flex items-center gap-3">
+                      {/* Read Button - Always visible */}
                       <Button
-                        onClick={() => handleMarkComplete(index)}
+                        variant="secondary"
                         size="sm"
-                        disabled={updatingArticles.has(index)}
-                        className="bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        asChild
+                        className="bg-secondary dark:bg-gray-700 text-secondary-foreground dark:text-gray-200 hover:bg-secondary/80 dark:hover:bg-gray-600"
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        {updatingArticles.has(index)
-                          ? "Updating..."
-                          : "Mark Complete"}
+                        <Link
+                          to={`/track/${trackId}/item/${index}`}
+                          className="flex items-center gap-2"
+                        >
+                          <BookOpen className="h-4 w-4" />
+                          Read
+                        </Link>
                       </Button>
-                    )}
+
+                      {/* Complete/Undo Button */}
+                      {article.completed ? (
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 rounded-full text-sm font-medium">
+                            <CheckCircle className="h-4 w-4" />
+                            Completed
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleMarkComplete(index)}
+                            disabled={updatingArticles.has(index)}
+                            className="text-muted-foreground dark:text-gray-400 hover:text-foreground dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                          >
+                            {updatingArticles.has(index)
+                              ? "Updating..."
+                              : "Undo"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => handleMarkComplete(index)}
+                          size="sm"
+                          disabled={updatingArticles.has(index)}
+                          className="bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          {updatingArticles.has(index)
+                            ? "Updating..."
+                            : "Mark Complete"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

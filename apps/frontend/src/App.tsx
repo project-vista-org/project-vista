@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/lib/theme";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import TrackPage from "./pages/TrackPage";
+import ItemPage from "./pages/ItemPage";
 import AuthCallback from "./pages/auth/callback";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/track/:trackId" element={<TrackPage />} />
+            <Route
+              path="/track/:trackId/item/:itemIndex"
+              element={<ItemPage />}
+            />
             <Route path="/auth/callback" element={<AuthCallback />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
