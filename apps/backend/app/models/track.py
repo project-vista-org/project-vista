@@ -16,6 +16,7 @@ class WikipediaArticle(BaseModel):
 class TrackBase(SQLModel):
     title: str
     description: Optional[str] = None
+    is_public: bool = Field(default=False)
 
 
 class Track(TrackBase, table=True):
@@ -36,6 +37,7 @@ class TrackUpdate(SQLModel):
     title: Optional[str] = None
     description: Optional[str] = None
     articles: Optional[List[WikipediaArticle]] = None
+    is_public: Optional[bool] = None
 
 
 class TrackResponse(TrackBase):

@@ -21,6 +21,7 @@ class TracksService:
             description=track_data.description,
             user_id=user_id,
             articles=[article.model_dump() for article in track_data.articles],
+            is_public=track_data.is_public,
         )
         return await self.tracks_repository.create(track=track, session=session)
 
@@ -48,6 +49,8 @@ class TracksService:
             track.description = track_data.description
         if track_data.articles is not None:
             track.articles = [article.model_dump() for article in track_data.articles]
+        if track_data.is_public is not None:
+            track.is_public = track_data.is_public
 
         track.updated_at = datetime.utcnow()
 

@@ -7,3 +7,4 @@ alwaysApply: true
 - The owner of this is project-vista-org
 - If I write "ipr:" it means I want you to create an issue, create a branch from that issue, and checkout to that branch. Issues should be as detailed as possible (only if there's actual content, don't "fluff" it up), and branches should be named accroding to industry standards. Then, create a dummy commit with no real changes, and create a PR for this branch.
 - If I create "merge" it means I want you to merge the pr and checkout to master, and pull so its updated.
+- All of the above should be done solely by using MCP, except for actions that currently can't such as creating file, committing and pushing.

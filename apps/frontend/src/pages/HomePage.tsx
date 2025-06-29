@@ -49,11 +49,17 @@ const NavigationSidebar = ({
   setActiveView: (view: string) => void;
 }) => {
   const { setOpenMobile, setOpen, isMobile, toggleSidebar } = useSidebar();
+  const navigate = useNavigate();
 
   const handleNavClick = (viewId: string) => {
     setActiveView(viewId);
     if (isMobile) {
       setOpenMobile(false);
+    }
+
+    // Navigate to explore page
+    if (viewId === "explore") {
+      navigate("/explore");
     }
   };
 
@@ -154,14 +160,21 @@ const HomePage = () => {
     loadUserAndTracks();
   }, [toast]);
 
-  const handleCreateTrack = async (title: string, articles: any[]) => {
+  const handleCreateTrack = async (
+    title: string,
+    articles: any[],
+    isPublic: boolean = false,
+  ) => {
     try {
-      const newTrack = await createTrack(title, articles);
-      setTracks([...tracks, newTrack]);
+      // Pass isPublic to the API (prepared for future backend implementation)
+      const newTrack = await createTrack(title, articles, undefined, isPublic);
+      // For now, ensure the is_public field is set locally since backend doesn't support it yet
+      const trackWithVisibility = { ...newTrack, is_public: isPublic };
+      setTracks([...tracks, trackWithVisibility]);
 
       toast({
         title: "Track Created!",
-        description: `"${title}" has been added to your tracks.`,
+        description: `"${title}" has been added to your tracks${isPublic ? " and is now public" : ""}.`,
       });
     } catch (error) {
       console.error("Failed to create track:", error);
@@ -171,6 +184,16 @@ const HomePage = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleVisibilityChange = (trackId: string, isPublic: boolean) => {
+    // For now, we'll update the local state
+    // Later this will make an API call to update the backend
+    setTracks((prevTracks) =>
+      prevTracks.map((track) =>
+        track.id === trackId ? { ...track, is_public: isPublic } : track,
+      ),
+    );
   };
 
   const handleTrackClick = (track: Track) => {
@@ -288,6 +311,7 @@ const HomePage = () => {
                         key={track.id}
                         track={track}
                         onClick={() => handleTrackClick(track)}
+                        onVisibilityChange={handleVisibilityChange}
                       />
                     ))}
                   </div>

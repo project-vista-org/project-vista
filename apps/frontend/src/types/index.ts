@@ -20,6 +20,7 @@ export interface Track {
   articles: WikipediaArticle[];
   created_at: string;
   updated_at: string;
+  is_public?: boolean;
 }
 
 export interface WikipediaSearchResult {

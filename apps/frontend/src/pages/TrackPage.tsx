@@ -37,6 +37,7 @@ import { fetchTrack, updateTrack } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
+import { VisibilityToggle } from "@/components/ui/visibility-toggle";
 
 // Navigation items
 const navigationItems = [
@@ -146,6 +147,35 @@ const TrackPage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeView, setActiveView] = useState("tracks");
   const { toast } = useToast();
+
+  const handleVisibilityChange = async (isPublic: boolean) => {
+    if (!track || !trackId) return;
+
+    try {
+      // Update the local state immediately for responsive UI
+      setTrack((prev) => (prev ? { ...prev, is_public: isPublic } : null));
+
+      // Make API call to update backend
+      const updatedTrack = await updateTrack(trackId, { is_public: isPublic });
+      setTrack(updatedTrack);
+
+      toast({
+        title: isPublic ? "Track made public" : "Track made private",
+        description: isPublic
+          ? "Your track is now visible to the community"
+          : "Your track is now private",
+      });
+    } catch (error) {
+      console.error("Failed to update track visibility:", error);
+      // Revert local state on error
+      setTrack((prev) => (prev ? { ...prev, is_public: !isPublic } : null));
+      toast({
+        title: "Error",
+        description: "Failed to update track visibility. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     const loadUserAndTrack = async () => {
@@ -292,9 +322,23 @@ const TrackPage = () => {
 
               {/* Track Header */}
               <div className="mb-8">
-                <h1 className="text-4xl font-bold text-foreground dark:text-gray-100 mb-3">
-                  {track.title}
-                </h1>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <h1 className="text-4xl font-bold text-foreground dark:text-gray-100">
+                    {track.title}
+                  </h1>
+
+                  {/* Visibility Control */}
+                  <div className="flex-shrink-0">
+                    <VisibilityToggle
+                      isPublic={track.is_public || false}
+                      onToggle={handleVisibilityChange}
+                      size="md"
+                      showLabel={true}
+                      className="border border-border hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-500"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-4 text-sm text-muted-foreground dark:text-gray-400">
                   <div className="flex items-center gap-2">
                     <Book className="h-4 w-4" />
