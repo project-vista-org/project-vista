@@ -119,6 +119,7 @@ export async function createTrack(
   title: string,
   articles: any[],
   description?: string,
+  isPublic?: boolean,
 ) {
   const response = await apiCall("/api/tracks/", {
     method: "POST",
@@ -126,6 +127,9 @@ export async function createTrack(
       title,
       description,
       articles,
+      // Note: isPublic will be ignored by the current backend
+      // This is prepared for future backend implementation
+      ...(isPublic !== undefined && { is_public: isPublic }),
     }),
   });
 
