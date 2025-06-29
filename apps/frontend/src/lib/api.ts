@@ -156,6 +156,7 @@ export async function updateTrack(
     title?: string;
     description?: string;
     articles?: any[];
+    is_public?: boolean;
   },
 ) {
   const response = await apiCall(`/api/tracks/${trackId}`, {
