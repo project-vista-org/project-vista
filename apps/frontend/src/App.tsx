@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import TrackPage from "./pages/TrackPage";
 import ItemPage from "./pages/ItemPage";
+import ExplorePageWithAuth from "./pages/ExplorePageWithAuth";
 import AuthCallback from "./pages/auth/callback";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/explore" element={<ExplorePageWithAuth />} />
             <Route path="/track/:trackId" element={<TrackPage />} />
             <Route
               path="/track/:trackId/item/:itemIndex"

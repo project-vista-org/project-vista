@@ -1,12 +1,19 @@
 import { Track } from "@/types";
 import { ExternalLink, BookOpen, Trophy, CheckCircle } from "lucide-react";
+import {
+  VisibilityBadge,
+  VisibilityToggle,
+} from "@/components/ui/visibility-toggle";
+import { useToast } from "@/hooks/use-toast";
 
 interface TrackCardProps {
   track: Track;
   onClick: () => void;
+  onVisibilityChange?: (trackId: string, isPublic: boolean) => void;
 }
 
-const TrackCard = ({ track, onClick }: TrackCardProps) => {
+const TrackCard = ({ track, onClick, onVisibilityChange }: TrackCardProps) => {
+  const { toast } = useToast();
   const completedArticles = track.articles.filter(
     (article) => article.completed,
   ).length;
@@ -141,10 +148,38 @@ const TrackCard = ({ track, onClick }: TrackCardProps) => {
         </div>
       )}
 
-      <div className="mt-4 pt-4 border-t border-border/50 dark:border-gray-700/50">
+      <div className="mt-4 pt-4 border-t border-border/50 dark:border-gray-700/50 flex items-center justify-between">
         <p className="text-xs text-muted-foreground dark:text-gray-400">
           Created {new Date(track.created_at).toLocaleDateString()}
         </p>
+
+        {/* Visibility Toggle */}
+        <div onClick={(e) => e.stopPropagation()}>
+          {onVisibilityChange ? (
+            <VisibilityToggle
+              isPublic={track.is_public || false}
+              onToggle={(newIsPublic) => {
+                onVisibilityChange?.(track.id, newIsPublic);
+                toast({
+                  title: newIsPublic
+                    ? "Track made public"
+                    : "Track made private",
+                  description: newIsPublic
+                    ? "Your track is now visible to the community"
+                    : "Your track is now private",
+                });
+              }}
+              size="sm"
+              showLabel={false}
+              className="hover:scale-105 transition-transform"
+            />
+          ) : (
+            <VisibilityBadge
+              isPublic={track.is_public || false}
+              className="opacity-75"
+            />
+          )}
+        </div>
       </div>
     </div>
   );

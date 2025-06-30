@@ -115,10 +115,21 @@ export async function fetchTracks() {
   return response.json();
 }
 
+export async function fetchPublicTracks() {
+  const response = await apiCall("/api/explore/tracks");
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch public tracks: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
 export async function createTrack(
   title: string,
   articles: any[],
   description?: string,
+  isPublic?: boolean,
 ) {
   const response = await apiCall("/api/tracks/", {
     method: "POST",
@@ -126,6 +137,9 @@ export async function createTrack(
       title,
       description,
       articles,
+      // Note: isPublic will be ignored by the current backend
+      // This is prepared for future backend implementation
+      ...(isPublic !== undefined && { is_public: isPublic }),
     }),
   });
 
@@ -152,6 +166,7 @@ export async function updateTrack(
     title?: string;
     description?: string;
     articles?: any[];
+    is_public?: boolean;
   },
 ) {
   const response = await apiCall(`/api/tracks/${trackId}`, {

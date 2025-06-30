@@ -69,6 +69,66 @@ await session.refresh(new_object)
 
 ---
 
+## 🏗️ Repository Pattern (MANDATORY)
+
+### ✅ ALL Database Queries Must Go Through Repositories
+
+**Repositories** are the ONLY place where database queries should be written. Service layer and routes must NEVER execute database queries directly.
+
+```python
+# CORRECT - Database queries in repository
+class UsersRepository(DatabaseLoggingMixin):
+    async def find_by_ids(self, user_ids: List[str], session: AsyncSession) -> List[User]:
+        statement = select(User).where(User.id.in_(user_ids))
+        result = await session.execute(statement)
+        return result.scalars().all()
+
+# CORRECT - Service calls repository
+class ExploreService:
+    def __init__(self):
+        self.users_repository = UsersRepository()
+
+    async def get_public_tracks(self, session: AsyncSession):
+        # Call repository method, don't write SQL here
+        users = await self.users_repository.find_by_ids(user_ids, session)
+```
+
+### ❌ NEVER Write Database Queries in Services or Routes
+
+```python
+# WRONG - Database query in service layer
+class ExploreService:
+    async def get_public_tracks(self, session: AsyncSession):
+        # WRONG - Don't write SQL queries in services
+        statement = select(User).where(User.id.in_(user_ids))
+        result = await session.execute(statement)
+        users = result.scalars().all()
+
+# WRONG - Database query in route handler
+@router.get("/users")
+async def get_users(session: AsyncSession = Depends(get_session)):
+    # WRONG - Don't write SQL queries in routes
+    statement = select(User)
+    result = await session.execute(statement)
+    return result.scalars().all()
+```
+
+### Repository Layer Responsibilities
+
+- **Data Access Logic**: All SQL queries, database operations
+- **Error Handling**: Database-specific error handling and logging
+- **Query Optimization**: Indexes, joins, complex queries
+- **Data Mapping**: Converting between database models and domain objects
+
+### Service Layer Responsibilities
+
+- **Business Logic**: Domain rules, validation, orchestration
+- **Repository Coordination**: Calling multiple repositories if needed
+- **Data Transformation**: Converting repository data for API responses
+- **Cross-cutting Concerns**: Caching, events, external services
+
+---
+
 ## 🛤️ Route Handlers
 
 ### ✅ ALL Route Handlers Must Be Async
@@ -185,6 +245,17 @@ async def my_function():
     async_result = await some_async_function()  # OK
 ```
 
+### ❌ Database Queries Outside Repositories
+
+```python
+# WRONG - Don't write database queries in services or routes
+class SomeService:
+    async def some_method(self, session: AsyncSession):
+        # WRONG - Database query in service
+        result = await session.execute(select(User))
+        return result.scalars().all()
+```
+
 ---
 
 ## 📦 Required Dependencies
@@ -226,6 +297,7 @@ When converting sync code to async:
 4. **Use `session.execute()` instead of `session.exec()`**
 5. **Use proper result handling** (`.scalar_one_or_none()`, `.scalars().all()`)
 6. **Update all dependencies** to use async versions
+7. **Move database queries to repositories** if they're in services or routes
 
 ---
 
@@ -242,6 +314,8 @@ Following these async patterns provides:
 
 ## 🎯 Summary
 
-**Golden Rule**: If it touches the database, network, or file system, it MUST be async.
+**Golden Rules**:
+1. If it touches the database, network, or file system, it MUST be async.
+2. All database queries MUST be in repositories, never in services or routes.
 
-Every new backend feature must follow these async patterns from the start. No exceptions.
+Every new backend feature must follow these async and repository patterns from the start. No exceptions.

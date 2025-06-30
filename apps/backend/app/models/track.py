@@ -16,6 +16,7 @@ class WikipediaArticle(BaseModel):
 class TrackBase(SQLModel):
     title: str
     description: Optional[str] = None
+    is_public: bool = Field(default=False)
 
 
 class Track(TrackBase, table=True):
@@ -36,6 +37,7 @@ class TrackUpdate(SQLModel):
     title: Optional[str] = None
     description: Optional[str] = None
     articles: Optional[List[WikipediaArticle]] = None
+    is_public: Optional[bool] = None
 
 
 class TrackResponse(TrackBase):
@@ -44,3 +46,22 @@ class TrackResponse(TrackBase):
     articles: List[WikipediaArticle]
     created_at: datetime
     updated_at: datetime
+
+
+# Models for explore page
+class CreatorInfo(BaseModel):
+    id: str
+    name: str
+    avatar: Optional[str] = None
+
+
+class PublicTrackResponse(BaseModel):
+    id: str
+    title: str
+    description: Optional[str]
+    creator: CreatorInfo
+    articles_count: int
+    created_at: datetime
+    # Placeholder social features for now
+    participant_count: int = 0
+    is_joined: bool = False

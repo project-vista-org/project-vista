@@ -4,6 +4,7 @@ import os
 from typing import Any, Dict
 
 import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
 
 
 def get_logging_config() -> Dict[str, Any]:
@@ -55,34 +56,56 @@ def get_logging_config() -> Dict[str, Any]:
                 "handlers": ["console"],
                 "propagate": False,
             },
+            # Suppress watchtower warnings for cleaner local development
+            "watchtower": {
+                "level": "ERROR",
+                "handlers": ["console"],
+                "propagate": False,
+            },
         },
         "root": {"level": "INFO", "handlers": ["console"]},
     }
 
     # Add CloudWatch handler for production/staging
     if environment in ["prod", "staging"]:
-        try:
-            # Create CloudWatch handler
-            config["handlers"]["cloudwatch"] = {
-                "class": "watchtower.CloudWatchLogHandler",
-                "log_group": log_group_name,
-                "stream_name": f"{environment}-api",
-                "boto3_client": boto3.client('logs', region_name=aws_region),
-                "level": "INFO",
-                "formatter": "detailed",
-                "max_batch_size": 10,
-                "max_batch_count": 10000,
-            }
+        # Check if CloudWatch logging should be disabled
+        disable_cloudwatch = (
+            os.getenv("DISABLE_CLOUDWATCH_LOGGING", "false").lower() == "true"
+        )
 
-            # Add cloudwatch to all loggers
-            for logger_name in config["loggers"]:
-                config["loggers"][logger_name]["handlers"].append("cloudwatch")
+        if not disable_cloudwatch:
+            try:
+                # Test AWS credentials first
+                logs_client = boto3.client('logs', region_name=aws_region)
+                logs_client.describe_log_groups(limit=1)  # Test call
 
-            config["root"]["handlers"].append("cloudwatch")
+                # Create CloudWatch handler with timeout settings
+                config["handlers"]["cloudwatch"] = {
+                    "class": "watchtower.CloudWatchLogHandler",
+                    "log_group": log_group_name,
+                    "stream_name": f"{environment}-api",
+                    "boto3_client": logs_client,
+                    "level": "INFO",
+                    "formatter": "detailed",
+                    "max_batch_size": 10,
+                    # Add timeout settings to prevent hanging
+                    "send_interval": 5,  # Send logs every 5 seconds
+                    "max_batch_count": 100,  # Smaller batch size
+                    "create_log_group": True,  # Auto-create log group if it doesn't exist
+                }
 
-        except Exception as e:
-            print(f"Failed to setup CloudWatch logging: {e}")
-            print("Falling back to console logging only")
+                # Add cloudwatch to all loggers
+                for logger_name in config["loggers"]:
+                    config["loggers"][logger_name]["handlers"].append("cloudwatch")
+
+                config["root"]["handlers"].append("cloudwatch")
+
+            except (NoCredentialsError, ClientError, Exception) as e:
+                print(
+                    f"CloudWatch logging disabled - AWS credentials not available or invalid: {e}"
+                )
+                print("Set DISABLE_CLOUDWATCH_LOGGING=true to suppress this message")
+                print("Falling back to console logging only")
 
     return config
 
