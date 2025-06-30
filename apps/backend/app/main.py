@@ -5,7 +5,7 @@ from apps.backend.app.auth import get_current_user
 from apps.backend.app.database import create_db_and_tables
 from apps.backend.app.logging_config import get_logging_config, logger
 from apps.backend.app.middleware import LoggingMiddleware
-from apps.backend.app.routes import tracks
+from apps.backend.app.routes import explore, tracks
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -60,6 +60,7 @@ def health_check():
 
 # Include routers
 app.include_router(tracks.router)
+app.include_router(explore.router)
 
 
 if __name__ == "__main__":

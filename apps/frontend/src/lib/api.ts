@@ -115,6 +115,16 @@ export async function fetchTracks() {
   return response.json();
 }
 
+export async function fetchPublicTracks() {
+  const response = await apiCall("/api/explore/tracks");
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch public tracks: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
 export async function createTrack(
   title: string,
   articles: any[],

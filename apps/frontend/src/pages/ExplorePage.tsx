@@ -31,184 +31,23 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { fetchPublicTracks } from "@/lib/api";
 
-// Types for community tracks
+// Types for community tracks - simplified to match backend response
 interface CommunityTrack {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   creator: {
     id: string;
     name: string;
-    avatar?: string;
+    avatar?: string | null;
   };
-  participantCount: number;
-  completedThisWeek: number;
-  recentParticipants: Array<{
-    id: string;
-    name: string;
-    avatar?: string;
-  }>;
-  categories: string[];
-  articlesCount: number;
-  difficulty: "Beginner" | "Intermediate" | "Advanced";
-  estimatedTime: string;
-  isJoined: boolean;
-  trending: boolean;
-  featured: boolean;
+  articles_count: number;
+  created_at: string;
+  participant_count: number;
+  is_joined: boolean;
 }
-
-// Mock data - In real implementation, this would come from backend
-const mockCommunityTracks: CommunityTrack[] = [
-  {
-    id: "1",
-    title: "Modern Physics Fundamentals",
-    description:
-      "Explore quantum mechanics, relativity, and particle physics through carefully curated Wikipedia articles.",
-    creator: {
-      id: "user1",
-      name: "Dr. Sarah Chen",
-      avatar: undefined,
-    },
-    participantCount: 203,
-    completedThisWeek: 47,
-    recentParticipants: [
-      { id: "p1", name: "Alex", avatar: undefined },
-      { id: "p2", name: "Maria", avatar: undefined },
-      { id: "p3", name: "John", avatar: undefined },
-    ],
-    categories: ["Physics", "Science"],
-    articlesCount: 15,
-    difficulty: "Advanced",
-    estimatedTime: "4-6 hours",
-    isJoined: false,
-    trending: true,
-    featured: true,
-  },
-  {
-    id: "2",
-    title: "Ancient Civilizations Journey",
-    description:
-      "Discover the rise and fall of great civilizations from Mesopotamia to the Roman Empire.",
-    creator: {
-      id: "user2",
-      name: "Prof. Michael Torres",
-      avatar: undefined,
-    },
-    participantCount: 156,
-    completedThisWeek: 23,
-    recentParticipants: [
-      { id: "p4", name: "Emma", avatar: undefined },
-      { id: "p5", name: "David", avatar: undefined },
-      { id: "p6", name: "Lisa", avatar: undefined },
-    ],
-    categories: ["History", "Culture"],
-    articlesCount: 22,
-    difficulty: "Intermediate",
-    estimatedTime: "6-8 hours",
-    isJoined: true,
-    trending: true,
-    featured: false,
-  },
-  {
-    id: "3",
-    title: "Introduction to Machine Learning",
-    description:
-      "Start your AI journey with fundamental concepts, algorithms, and real-world applications.",
-    creator: {
-      id: "user3",
-      name: "Dr. Priya Patel",
-      avatar: undefined,
-    },
-    participantCount: 89,
-    completedThisWeek: 12,
-    recentParticipants: [
-      { id: "p7", name: "Carlos", avatar: undefined },
-      { id: "p8", name: "Sophie", avatar: undefined },
-    ],
-    categories: ["Technology", "AI", "Computer Science"],
-    articlesCount: 18,
-    difficulty: "Beginner",
-    estimatedTime: "5-7 hours",
-    isJoined: false,
-    trending: false,
-    featured: true,
-  },
-  {
-    id: "4",
-    title: "Climate Science Essentials",
-    description:
-      "Understand climate change, atmospheric science, and environmental impacts through scientific articles.",
-    creator: {
-      id: "user4",
-      name: "Dr. James Wilson",
-      avatar: undefined,
-    },
-    participantCount: 124,
-    completedThisWeek: 31,
-    recentParticipants: [
-      { id: "p9", name: "Ana", avatar: undefined },
-      { id: "p10", name: "Tom", avatar: undefined },
-      { id: "p11", name: "Rachel", avatar: undefined },
-    ],
-    categories: ["Environment", "Science"],
-    articlesCount: 20,
-    difficulty: "Intermediate",
-    estimatedTime: "4-5 hours",
-    isJoined: false,
-    trending: true,
-    featured: false,
-  },
-  {
-    id: "5",
-    title: "Philosophy of Mind",
-    description:
-      "Explore consciousness, free will, and the nature of mental states through philosophical works.",
-    creator: {
-      id: "user5",
-      name: "Prof. Elena Rodriguez",
-      avatar: undefined,
-    },
-    participantCount: 67,
-    completedThisWeek: 8,
-    recentParticipants: [
-      { id: "p12", name: "Oliver", avatar: undefined },
-      { id: "p13", name: "Maya", avatar: undefined },
-    ],
-    categories: ["Philosophy", "Psychology"],
-    articlesCount: 12,
-    difficulty: "Advanced",
-    estimatedTime: "3-4 hours",
-    isJoined: false,
-    trending: false,
-    featured: true,
-  },
-  {
-    id: "6",
-    title: "Space Exploration Timeline",
-    description:
-      "Journey through humanity's quest to explore space, from Sputnik to Mars missions.",
-    creator: {
-      id: "user6",
-      name: "Captain Lisa Park",
-      avatar: undefined,
-    },
-    participantCount: 178,
-    completedThisWeek: 42,
-    recentParticipants: [
-      { id: "p14", name: "Kevin", avatar: undefined },
-      { id: "p15", name: "Zoe", avatar: undefined },
-      { id: "p16", name: "Marcus", avatar: undefined },
-    ],
-    categories: ["Space", "Technology", "History"],
-    articlesCount: 25,
-    difficulty: "Beginner",
-    estimatedTime: "6-8 hours",
-    isJoined: true,
-    trending: true,
-    featured: false,
-  },
-];
 
 // Navigation items
 const navigationItems = [
@@ -327,7 +166,7 @@ const CommunityTrackCard = ({
                 WebkitBoxOrient: "vertical",
               }}
             >
-              {track.description}
+              {track.description || "No description available"}
             </p>
           </div>
         </div>
@@ -335,11 +174,11 @@ const CommunityTrackCard = ({
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <BookOpen className="h-3 w-3" />
-            <span>{track.articlesCount} articles</span>
+            <span>{track.articles_count} articles</span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            <span>{track.estimatedTime}</span>
+            <span>Created by {track.creator.name}</span>
           </div>
         </div>
       </CardHeader>
@@ -350,7 +189,7 @@ const CommunityTrackCard = ({
           <div className="flex items-center gap-2 text-sm">
             <Users className="h-4 w-4 text-blue-500" />
             <span className="font-medium text-foreground">
-              {track.participantCount} participants
+              {track.participant_count} participants
             </span>
           </div>
         </div>
@@ -359,12 +198,12 @@ const CommunityTrackCard = ({
         <Button
           onClick={() => onJoin(track.id)}
           className={`w-full ${
-            track.isJoined
+            track.is_joined
               ? "bg-emerald-500 hover:bg-emerald-600 text-white"
               : "bg-blue-500 hover:bg-blue-600 text-white"
           }`}
         >
-          {track.isJoined ? (
+          {track.is_joined ? (
             <>
               <Eye className="h-4 w-4 mr-2" />
               Joined
@@ -385,31 +224,42 @@ const CommunityTrackCard = ({
 const ExplorePage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeView, setActiveView] = useState("explore");
-  const [joinedTracks, setJoinedTracks] = useState<Set<string>>(
-    new Set(["2", "6"]),
-  );
-  const [displayedCount, setDisplayedCount] = useState(3);
+  const [joinedTracks, setJoinedTracks] = useState<Set<string>>(new Set());
+  const [publicTracks, setPublicTracks] = useState<CommunityTrack[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [displayedCount, setDisplayedCount] = useState(6); // Show more initially
   const { toast } = useToast();
 
-  // Show all tracks in one list
-  const allTracks = mockCommunityTracks;
-  const displayedTracks = allTracks.slice(0, displayedCount);
-  const hasMoreTracks = displayedCount < allTracks.length;
-
+  // Load data on component mount
   useEffect(() => {
-    // Get current user
-    const loadUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get current user
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setUser(user);
+
+        // Fetch public tracks
+        const tracks = await fetchPublicTracks();
+        setPublicTracks(tracks);
+      } catch (err) {
+        console.error("Error loading explore data:", err);
+        setError(err instanceof Error ? err.message : "Failed to load tracks");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    loadUser();
+    loadData();
   }, []);
 
   const handleJoinTrack = (trackId: string) => {
-    const track = mockCommunityTracks.find((t) => t.id === trackId);
+    const track = publicTracks.find((t) => t.id === trackId);
     if (!track) return;
 
     if (joinedTracks.has(trackId)) {
@@ -419,23 +269,27 @@ const ExplorePage = () => {
         description: `Opening ${track.title}...`,
       });
     } else {
-      // Join the track
+      // Join the track (for now, just update local state)
       setJoinedTracks((prev) => new Set([...prev, trackId]));
       toast({
         title: "Joined track!",
-        description: `You've joined "${track.title}" with ${track.participantCount + 1} other participants.`,
+        description: `You've joined "${track.title}". This will be fully implemented in the next step.`,
       });
     }
   };
 
-  // Update track join status based on state
-  const tracksWithJoinStatus = displayedTracks.map((track) => ({
-    ...track,
-    isJoined: joinedTracks.has(track.id),
-  }));
+  // Update tracks with join status
+  const displayedTracks = publicTracks
+    .slice(0, displayedCount)
+    .map((track) => ({
+      ...track,
+      is_joined: joinedTracks.has(track.id),
+    }));
+
+  const hasMoreTracks = displayedCount < publicTracks.length;
 
   const handleSeeMore = () => {
-    setDisplayedCount((prev) => prev + 3);
+    setDisplayedCount((prev) => prev + 6);
   };
 
   return (
@@ -476,28 +330,64 @@ const ExplorePage = () => {
                 </p>
               </div>
 
-              {/* Community Tracks Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {tracksWithJoinStatus.map((track) => (
-                  <CommunityTrackCard
-                    key={track.id}
-                    track={track}
-                    onJoin={handleJoinTrack}
-                  />
-                ))}
-              </div>
+              {/* Loading State */}
+              {loading && (
+                <div className="text-center py-16">
+                  <div className="text-muted-foreground">Loading tracks...</div>
+                </div>
+              )}
 
-              {/* See More Button */}
-              <div className="text-center">
-                <Button
-                  variant="outline"
-                  onClick={handleSeeMore}
-                  disabled={!hasMoreTracks}
-                  className="px-8 py-2"
-                >
-                  {hasMoreTracks ? "See More" : "No More Tracks"}
-                </Button>
-              </div>
+              {/* Error State */}
+              {error && (
+                <div className="text-center py-16">
+                  <div className="text-red-500 mb-4">Error: {error}</div>
+                  <Button onClick={() => window.location.reload()}>
+                    Try Again
+                  </Button>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!loading && !error && publicTracks.length === 0 && (
+                <div className="text-center py-16">
+                  <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-6 opacity-50" />
+                  <h3 className="text-2xl font-semibold text-foreground mb-4">
+                    No Public Tracks Yet
+                  </h3>
+                  <p className="text-muted-foreground mb-8">
+                    Be the first to create a public track for the community!
+                  </p>
+                  <Button onClick={() => window.history.back()}>Go Back</Button>
+                </div>
+              )}
+
+              {/* Community Tracks Grid */}
+              {!loading && !error && publicTracks.length > 0 && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    {displayedTracks.map((track) => (
+                      <CommunityTrackCard
+                        key={track.id}
+                        track={track}
+                        onJoin={handleJoinTrack}
+                      />
+                    ))}
+                  </div>
+
+                  {/* See More Button */}
+                  {hasMoreTracks && (
+                    <div className="text-center">
+                      <Button
+                        variant="outline"
+                        onClick={handleSeeMore}
+                        className="px-8 py-2"
+                      >
+                        See More
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </main>
         </div>

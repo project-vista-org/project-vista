@@ -27,6 +27,23 @@ class TracksRepository(DatabaseLoggingMixin):
             self.log_db_error("SELECT", "tracks", e, user_id=user_id)
             raise
 
+    async def find_public_tracks_excluding_user(
+        self, user_id: str, session: AsyncSession
+    ) -> List[Track]:
+        """Find all public tracks excluding tracks created by the current user"""
+        try:
+            self.log_db_operation("SELECT", "public_tracks", user_id=user_id)
+            statement = select(Track).where(Track.is_public, Track.user_id != user_id)
+            result = await session.execute(statement)
+            tracks = result.scalars().all()
+            self.log_db_operation(
+                "SELECT_RESULT", "public_tracks", user_id=user_id, count=len(tracks)
+            )
+            return tracks
+        except Exception as e:
+            self.log_db_error("SELECT", "public_tracks", e, user_id=user_id)
+            raise
+
     @staticmethod
     async def find_by_id_and_user_id(
         track_id: str, user_id: str, session: AsyncSession

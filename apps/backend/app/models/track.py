@@ -46,3 +46,22 @@ class TrackResponse(TrackBase):
     articles: List[WikipediaArticle]
     created_at: datetime
     updated_at: datetime
+
+
+# Models for explore page
+class CreatorInfo(BaseModel):
+    id: str
+    name: str
+    avatar: Optional[str] = None
+
+
+class PublicTrackResponse(BaseModel):
+    id: str
+    title: str
+    description: Optional[str]
+    creator: CreatorInfo
+    articles_count: int
+    created_at: datetime
+    # Placeholder social features for now
+    participant_count: int = 0
+    is_joined: bool = False
